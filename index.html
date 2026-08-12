@@ -41,6 +41,7 @@
                 <span id="currentUserTag" class="text-[11px] md:text-xs bg-blue-50 text-blue-700 px-2 py-1.5 rounded-md font-bold border border-blue-100 shadow-sm">👤 未登入</span>
                 <span id="sessionTimer" class="text-[11px] bg-amber-50 text-amber-700 px-2 py-1.5 rounded-md font-mono font-bold hidden border border-amber-200"></span>
                 <span id="loading-tag" class="text-blue-500 text-xs hidden animate-pulse font-bold bg-blue-50 px-2 py-1 rounded"><i class="fas fa-sync-alt fa-spin mr-1"></i>讀取中</span>
+                <button id="userManagementButton" onclick="openUserManagement()" class="hidden text-sm text-indigo-600 font-bold bg-indigo-50 border border-indigo-100 rounded-lg px-2 py-1.5 active:scale-95 transition-transform" aria-label="使用者管理" title="使用者管理"><i class="fas fa-users-cog"></i><span class="hidden md:inline ml-1">使用者</span></button>
                 <button onclick="handleLogout()" class="text-sm text-red-500 font-bold ml-1 active:scale-90 transition-transform p-1"><i class="fas fa-sign-out-alt text-lg"></i></button>
             </div>
         </div>
@@ -104,6 +105,9 @@
                     <label class="flex items-center gap-1.5 whitespace-nowrap bg-gray-50 border border-gray-300 px-2 py-1.5 rounded text-xs font-medium cursor-pointer">
                         <input type="checkbox" id="lowStockOnly" onchange="filterItems()" class="rounded text-blue-600 w-3.5 h-3.5"><span>僅低庫存</span>
                     </label>
+                    <label class="flex items-center gap-1.5 whitespace-nowrap bg-gray-50 border border-gray-300 px-2 py-1.5 rounded text-xs font-medium cursor-pointer">
+                        <input type="checkbox" id="showHiddenZeroItems" onchange="filterItems()" class="rounded text-blue-600 w-3.5 h-3.5"><span>顯示已隱藏零庫存</span>
+                    </label>
                 </div>
             </div>
 
@@ -160,9 +164,10 @@
                 <div class="space-y-4">
                     <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-50 space-y-4">
                         <div><label class="block text-xs font-bold text-slate-600 mb-1.5 ml-1">作業類型</label><select id="manualType" onchange="toggleManualMode()" class="w-full px-4 py-3 border-2 border-indigo-100 rounded-xl font-bold text-indigo-900 outline-none text-sm"><option value="入庫">📥 入庫建檔</option><option value="領用">📤 領用扣帳</option></select></div>
-                        <div><label class="block text-xs font-bold text-slate-600 mb-1.5 ml-1">自訂 ID / 代碼 <span class="text-red-500">*</span></label><input type="text" id="manualId" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl font-mono font-bold outline-none text-sm" list="existing-ids-list" oninput="autoFillManual()"></div>
+                        <div><label class="block text-xs font-bold text-slate-600 mb-1.5 ml-1">ID / 代碼 <span class="text-red-500">*</span></label><input type="text" id="manualId" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl font-mono font-bold outline-none text-sm" list="existing-ids-list" oninput="autoFillManual()"></div>
                         <datalist id="existing-ids-list"></datalist>
-                        <div><label class="block text-xs font-bold text-slate-600 mb-1.5 ml-1">品項名稱</label><input type="text" id="manualName" placeholder="若無輸入將帶入ID" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-slate-600 text-sm outline-none"></div>
+                        <div id="manualNameInputContainer"><label class="block text-xs font-bold text-slate-600 mb-1.5 ml-1">品項名稱</label><input type="text" id="manualName" placeholder="若無輸入將帶入ID" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-slate-600 text-sm outline-none"></div>
+                        <div id="manualOutboundNameContainer" class="hidden"><label class="block text-xs font-bold text-indigo-700 mb-1.5 ml-1">選擇有庫存的品項 <span class="text-red-500">*</span></label><select id="manualOutboundNameSelect" onchange="selectManualOutboundItem()" class="w-full px-4 py-3 border-2 border-indigo-200 rounded-xl bg-white font-bold text-slate-700 text-sm outline-none"><option value="">請選擇品項</option></select></div>
                     </div>
                     <div id="manualBatchContainer" class="hidden px-2"><label class="block text-xs font-bold text-indigo-600 mb-1.5 ml-1">選擇指定扣帳批次</label><select id="manualBatchSelect" class="w-full px-4 py-2.5 border-2 border-indigo-200 rounded-xl font-bold text-slate-700 text-sm outline-none"></select></div>
                     <div id="manualDetailsContainer" class="grid grid-cols-2 gap-3 px-2">
@@ -224,11 +229,23 @@
             </div>
         </div>
 
+        <!-- ======================= 6. 管理者庫存編輯 ======================= -->
+        <div id="adminView" class="hidden space-y-4">
+            <div class="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-100">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                    <div><h2 class="text-lg font-bold text-slate-800 flex items-center"><i class="fas fa-user-shield mr-2 text-indigo-600"></i>管理者庫存頁面</h2><p class="text-xs text-slate-500 mt-1">可直接修改 LOT、有效期限與庫存量；每次修改都會留下異動紀錄。</p></div>
+                    <button onclick="openUserManagement()" class="px-3 py-2 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg font-bold text-sm"><i class="fas fa-users-cog mr-1"></i>使用者管理</button>
+                </div>
+                <div class="relative mb-4"><input type="text" id="adminInventorySearch" oninput="renderAdminInventory()" placeholder="搜尋品名、ID 或 LOT..." class="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-sm outline-none"><i class="fas fa-search absolute left-3 top-3.5 text-gray-400 text-sm"></i></div>
+                <div id="adminInventoryList" class="space-y-3"></div>
+            </div>
+        </div>
+
     </main>
 
     <!-- 底部導航列 (改為 5 個按鈕) -->
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 pb-safe">
-        <div class="max-w-6xl mx-auto grid grid-cols-5 py-1.5 px-1">
+        <div id="bottomNavGrid" class="max-w-6xl mx-auto grid grid-cols-5 py-1.5 px-1">
             <button onclick="switchTab('dashboard', this)" class="nav-item active flex flex-col items-center py-2 rounded-lg hover:bg-blue-50 transition-colors">
                 <i class="fas fa-home text-lg mb-1"></i><span class="text-[10px] font-bold">總覽</span>
             </button>
@@ -244,6 +261,9 @@
             <button onclick="switchTab('report', this)" class="nav-item flex flex-col items-center py-2 rounded-lg hover:bg-blue-50 transition-colors">
                 <i class="fas fa-chart-line text-lg mb-1"></i><span class="text-[10px] font-bold">報表</span>
             </button>
+            <button id="adminNavButton" onclick="switchTab('admin', this)" class="nav-item hidden flex flex-col items-center py-2 rounded-lg hover:bg-blue-50 transition-colors">
+                <i class="fas fa-user-shield text-lg mb-1"></i><span class="text-[10px] font-bold">管理者</span>
+            </button>
         </div>
     </nav>
 
@@ -256,6 +276,41 @@
         </div>
     </div>
 
+    <!-- 管理員限定：使用者管理 -->
+    <div id="userManagementModal" class="fixed inset-0 modal-overlay hidden items-center justify-center z-[90] p-3 md:p-5">
+        <div class="bg-white rounded-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-2xl border border-gray-100">
+            <div class="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex justify-between items-center z-10">
+                <div><h2 class="font-black text-slate-800"><i class="fas fa-users-cog text-indigo-600 mr-2"></i>使用者管理</h2><p class="text-[11px] text-slate-500 mt-0.5">只有管理員可以查看與修改</p></div>
+                <button onclick="closeUserManagement()" class="w-9 h-9 rounded-full bg-slate-100 text-slate-600 active:scale-95" aria-label="關閉"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-4 space-y-5">
+                <section class="bg-indigo-50/60 border border-indigo-100 rounded-xl p-4 space-y-3">
+                    <h3 class="font-bold text-indigo-900 text-sm"><i class="fas fa-user-plus mr-1"></i>新增使用者</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div><label class="block text-xs font-bold text-slate-600 mb-1">登入帳號</label><input id="newUserAccount" type="text" maxlength="64" autocomplete="off" class="w-full px-3 py-2.5 border border-indigo-200 rounded-lg bg-white outline-none focus:border-indigo-500" placeholder="例如 nurse01"></div>
+                        <div><label class="block text-xs font-bold text-slate-600 mb-1">顯示名稱</label><input id="newUserDisplayName" type="text" maxlength="80" autocomplete="off" class="w-full px-3 py-2.5 border border-indigo-200 rounded-lg bg-white outline-none focus:border-indigo-500" placeholder="例如 護理師小美"></div>
+                        <div><label class="block text-xs font-bold text-slate-600 mb-1">密碼</label><input id="newUserPassword" type="password" autocomplete="new-password" class="w-full px-3 py-2.5 border border-indigo-200 rounded-lg bg-white outline-none focus:border-indigo-500" placeholder="不可空白"></div>
+                        <div><label class="block text-xs font-bold text-slate-600 mb-1">權限</label><select id="newUserRole" class="w-full px-3 py-2.5 border border-indigo-200 rounded-lg bg-white outline-none focus:border-indigo-500"><option value="user">一般使用者</option><option value="admin">管理員</option></select></div>
+                    </div>
+                    <button id="createUserButton" onclick="createManagedUser()" class="w-full md:w-auto px-5 py-2.5 bg-indigo-600 text-white rounded-lg font-bold shadow-sm active:scale-95"><i class="fas fa-plus mr-1"></i>新增帳號</button>
+                </section>
+                <section>
+                    <div class="flex items-center justify-between mb-3"><h3 class="font-bold text-slate-800 text-sm">現有使用者</h3><button onclick="loadManagedUsers()" class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg"><i class="fas fa-sync-alt mr-1"></i>重新整理</button></div>
+                    <div id="managedUsersList" class="space-y-2"><div class="text-center text-slate-400 py-6"><i class="fas fa-spinner fa-spin mr-1"></i>讀取中</div></div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <div id="resetUserPasswordModal" class="fixed inset-0 modal-overlay hidden items-center justify-center z-[95] p-4">
+        <div class="bg-white rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-gray-100 space-y-4">
+            <div class="text-center"><div class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-2"><i class="fas fa-key"></i></div><h3 class="font-black text-slate-800">重設密碼</h3><p id="resetUserPasswordTarget" class="text-xs text-slate-500 mt-1"></p></div>
+            <div><label class="block text-xs font-bold text-slate-600 mb-1">新密碼</label><input id="managedResetPassword" type="password" autocomplete="new-password" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-amber-500"></div>
+            <div><label class="block text-xs font-bold text-slate-600 mb-1">再次輸入</label><input id="managedResetPasswordConfirm" type="password" autocomplete="new-password" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-amber-500"></div>
+            <div class="flex gap-2"><button onclick="closeResetUserPassword()" class="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-lg font-bold">取消</button><button id="resetUserPasswordButton" onclick="submitManagedPasswordReset()" class="flex-1 py-2.5 bg-amber-500 text-white rounded-lg font-bold">確認重設</button></div>
+        </div>
+    </div>
+
     <script>
         // ⚠️ 部署 Cloudflare Worker 後，將下方網址替換成 Wrangler deploy 顯示的 workers.dev 網址
         const API_URL = "https://shanshi-inventory-api.arenastone-tw.workers.dev";
@@ -263,7 +318,11 @@
         let allItems = [], filteredItems = [], scanMode = 'inbound', scannedData = null;
         let html5QrCode = null, homeQrCode = null, isScanningActive = false, isHomeScanningActive = false;
         let CURRENT_USER_NAME = "";
+        let CURRENT_USER_ACCOUNT = "";
+        let CURRENT_USER_ROLE = "";
         let CURRENT_SESSION_TOKEN = "";
+        let managedUsers = [];
+        let managedResetUserId = null;
         let lastScanTime = 0, sessionInterval = null;
         let modifiedScanIndices = new Set();
 
@@ -330,6 +389,7 @@ function normalizeInventoryItem(item) {
     const id = String(item?.id ?? '').trim();
     const name = String(item?.name ?? '').trim() || id;
     return {
+        rowId: Number(item?.rowId) || 0,
         id,
         name,
         category: String(item?.category ?? ''),
@@ -338,6 +398,7 @@ function normalizeInventoryItem(item) {
         qty: parseInt(item?.qty) || 0,
         min_qty: parseInt(item?.min_qty) || 0,
         price: parseFloat(item?.price) || 0,
+        isHidden: item?.isHidden === true,
         last_stocktake: String(item?.last_stocktake ?? '')
     };
 }
@@ -458,10 +519,12 @@ function refreshCurrentViews() {
     updateDashboard();
     updateCategoryFilter();
     updateManualIdList();
+    updateManualOutboundOptions();
     // 隱藏中的首頁不預先重畫，避免存檔成功後還花時間建立大量 DOM；切回首頁時會立即 render。
     if (!document.getElementById('dashboardView').classList.contains('hidden')) filterItems();
     if (!document.getElementById('thresholdView').classList.contains('hidden')) renderThresholds();
     if (!document.getElementById('reportView').classList.contains('hidden')) generateReport();
+    if (!document.getElementById('adminView').classList.contains('hidden')) renderAdminInventory();
     scheduleInventoryCacheSave();
 }
 
@@ -643,8 +706,11 @@ function checkLoginSession() {
             const stillValid = session.token && (serverExpiry ? now < serverExpiry : now - session.timestamp < 1800000);
             if (stillValid) {
                 CURRENT_USER_NAME = session.name;
+                CURRENT_USER_ACCOUNT = session.account || '';
+                CURRENT_USER_ROLE = session.role || '';
                 CURRENT_SESSION_TOKEN = session.token;
                 document.getElementById('currentUserTag').innerText = `👤 ${session.name}`;
+                applyUserRoleUi();
                 document.getElementById('loginPortal').classList.add('hidden');
                 startSessionTimer(session.timestamp || now, session.expiresAt || '');
                 hydrateInventoryCache();
@@ -687,12 +753,15 @@ async function handlePortalLogin() {
     try {
         const res = await postApi({ action: 'login', account: acc, password: pwd });
         CURRENT_USER_NAME = res.name;
+        CURRENT_USER_ACCOUNT = res.account || acc;
+        CURRENT_USER_ROLE = res.role || 'user';
         CURRENT_SESSION_TOKEN = res.token || '';
         if (!CURRENT_SESSION_TOKEN) throw new Error('伺服器未回傳登入憑證');
         document.getElementById('currentUserTag').innerText = `👤 ${res.name}`;
         document.getElementById('loginPortal').classList.add('hidden');
         const now = Date.now();
-        localStorage.setItem('SHANSHI_SESSION', JSON.stringify({ name: res.name, token: CURRENT_SESSION_TOKEN, timestamp: now, expiresAt: res.expiresAt || '' }));
+        localStorage.setItem('SHANSHI_SESSION', JSON.stringify({ account: CURRENT_USER_ACCOUNT, name: res.name, role: CURRENT_USER_ROLE, token: CURRENT_SESSION_TOKEN, timestamp: now, expiresAt: res.expiresAt || '' }));
+        applyUserRoleUi();
         startSessionTimer(now, res.expiresAt || '');
         hydrateInventoryCache();
         loadData();
@@ -713,7 +782,14 @@ function handleLogout() {
     const logoutToken = CURRENT_SESSION_TOKEN;
     localStorage.removeItem('SHANSHI_SESSION');
     CURRENT_USER_NAME = "";
+    CURRENT_USER_ACCOUNT = "";
+    CURRENT_USER_ROLE = "";
     CURRENT_SESSION_TOKEN = "";
+    managedUsers = [];
+    managedResetUserId = null;
+    applyUserRoleUi();
+    closeResetUserPassword();
+    closeUserManagement();
     if (logoutToken && API_URL && !API_URL.includes('REPLACE-WITH-YOUR-WORKER')) {
         fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${logoutToken}` }, body: JSON.stringify({ action: 'logout', _requestId: createRequestId() }), keepalive: true }).catch(() => {});
     }
@@ -818,15 +894,18 @@ function applyInventoryData(data, silentMode = false, options = {}) {
     if (silentMode) {
         updateCategoryFilter();
         updateManualIdList();
+        updateManualOutboundOptions();
         if (!document.getElementById('dashboardView').classList.contains('hidden')) filterItems();
     } else {
         if (!document.getElementById('dashboardView').classList.contains('hidden')) filterItems();
         updateCategoryFilter();
         updateManualIdList();
+        updateManualOutboundOptions();
     }
 
     if (!document.getElementById('thresholdView').classList.contains('hidden')) renderThresholds();
     if (!document.getElementById('reportView').classList.contains('hidden')) generateReport();
+    if (!document.getElementById('adminView').classList.contains('hidden')) renderAdminInventory();
     if (options.persistCache !== false) saveInventoryCache();
 }
 
@@ -909,7 +988,8 @@ async function loadData() {
                         pNameMap.set(batchKey, {
                             id: item.id, name: item.name, category: item.category,
                             qty: parseInt(item.qty), min_qty: item.min_qty,
-                            expiry: item.expiry, lot: item.lot, last_stocktake: item.last_stocktake
+                            expiry: item.expiry, lot: item.lot, last_stocktake: item.last_stocktake,
+                            isHidden: item.isHidden === true
                         });
                     }
                 }
@@ -943,9 +1023,11 @@ async function loadData() {
                 
                 const totalQty = batches.reduce((sum, b) => sum + (parseInt(b.qty) || 0), 0);
                 const isLowStock = totalQty <= (baseItem.min_qty || 0);
+                const isCardHidden = batches.every(b => b.isHidden === true);
+                const encodedItemId = encodeURIComponent(itemId);
                 
                 html += `
-                    <div class="bg-white rounded-xl shadow-md border border-gray-300 border-l-[6px] ${statusBorderColor} mb-5 overflow-hidden transition-all hover:shadow-lg">
+                    <div class="bg-white rounded-xl shadow-md border border-gray-300 border-l-[6px] ${statusBorderColor} mb-5 overflow-hidden transition-all hover:shadow-lg ${isCardHidden ? 'opacity-60' : ''}">
                         <div class="p-3 md:p-4">
                             <div class="flex justify-between items-start mb-2 gap-2">
                                 <div>
@@ -960,6 +1042,7 @@ async function loadData() {
                                 <div><div class="text-[10px] text-gray-500 font-medium">安全門檻</div><div class="font-semibold text-gray-700 mt-0.5">${baseItem.min_qty || '0'}</div></div>
                                 <div><div class="text-[10px] text-gray-500 font-medium">盤點時間</div><div class="font-mono text-[10px] text-gray-600 mt-0.5">${formatToYYYYMMDDHHMM(latestStocktake)}</div></div>
                             </div>
+                            ${totalQty === 0 ? `<div class="flex justify-end mb-2"><button onclick="toggleZeroItemHidden('${encodedItemId}', ${isCardHidden ? 'false' : 'true'})" class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold border ${isCardHidden ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-slate-100 text-slate-600 border-slate-200'}"><i class="fas ${isCardHidden ? 'fa-eye' : 'fa-eye-slash'} mr-1"></i>${isCardHidden ? '重新顯示卡片' : '隱藏零庫存卡片'}</button></div>` : ''}
                             
                             <div class="border-t border-gray-200 pt-3 mt-1">
                                 <p class="text-[11px] text-slate-500 font-bold mb-2 flex items-center gap-1"><i class="fas fa-layer-group text-slate-400"></i> 實體合併效期盤點：</p>
@@ -1382,6 +1465,33 @@ function updateCategoryFilter() {
             el.innerHTML = [...new Set(allItems.map(i => i.id).filter(Boolean))].map(id => `<option value="${id}">`).join('');
         }
 
+        function updateManualOutboundOptions() {
+            const select = document.getElementById('manualOutboundNameSelect');
+            if (!select) return;
+            const previous = select.value;
+            const available = new Map();
+            allItems.forEach(item => {
+                const qty = parseInt(item.qty) || 0;
+                if (qty <= 0) return;
+                if (!available.has(item.id)) available.set(item.id, { id: item.id, name: item.name || item.id, qty: 0 });
+                available.get(item.id).qty += qty;
+            });
+            const rows = [...available.values()].sort((a, b) => a.name.localeCompare(b.name, 'zh-TW') || a.id.localeCompare(b.id));
+            select.innerHTML = '<option value="">請選擇品項</option>' + rows.map(item => `<option value="${escapeManagementHtml(item.id)}">${escapeManagementHtml(item.name)}（ID: ${escapeManagementHtml(item.id)}｜庫存: ${item.qty}）</option>`).join('');
+            if (previous && available.has(previous)) select.value = previous;
+        }
+
+        function selectManualOutboundItem() {
+            const id = document.getElementById('manualOutboundNameSelect').value;
+            const idEl = document.getElementById('manualId');
+            const nameEl = document.getElementById('manualName');
+            idEl.value = id;
+            const matches = itemIndexes.byId.get(id) || [];
+            nameEl.value = matches[0]?.name || '';
+            if (id) populateBatchSelect(id, 'manualBatchSelect', 'outbound');
+            else document.getElementById('manualBatchSelect').innerHTML = '';
+        }
+
         function populateBatchSelect(id, selectElementId, mode) {
             const select = document.getElementById(selectElementId); select.innerHTML = '';
             let batches = (itemIndexes.byId.get(id) || []).filter(i => parseInt(i.qty) > 0).slice();
@@ -1487,12 +1597,19 @@ async function startScanner() {
         function toggleManualMode() {
             const mode = document.getElementById('manualType').value;
             const nameEl = document.getElementById('manualName');
+            const idEl = document.getElementById('manualId');
+            const nameInputContainer = document.getElementById('manualNameInputContainer');
+            const outboundNameContainer = document.getElementById('manualOutboundNameContainer');
             if(mode === '入庫') {
                 document.getElementById('manualDetailsContainer').classList.remove('hidden');
                 document.getElementById('manualPriceContainer').classList.remove('hidden');
                 document.getElementById('manualBatchContainer').classList.add('hidden');
                 nameEl.readOnly = false;
                 nameEl.classList.remove('bg-gray-100');
+                idEl.readOnly = false;
+                idEl.classList.remove('bg-gray-100', 'text-gray-500');
+                nameInputContainer.classList.remove('hidden');
+                outboundNameContainer.classList.add('hidden');
                 // 入庫模式不自動顯示 ID 對應品名；使用者可自行輸入，空白送出時再以 ID 作為品名。
                 nameEl.value = '';
             } else {
@@ -1501,6 +1618,12 @@ async function startScanner() {
                 document.getElementById('manualBatchContainer').classList.remove('hidden');
                 nameEl.readOnly = true;
                 nameEl.classList.add('bg-gray-100');
+                idEl.readOnly = true;
+                idEl.classList.add('bg-gray-100', 'text-gray-500');
+                nameInputContainer.classList.add('hidden');
+                outboundNameContainer.classList.remove('hidden');
+                updateManualOutboundOptions();
+                selectManualOutboundItem();
             }
             autoFillManual(); 
         }
@@ -1518,7 +1641,7 @@ async function startScanner() {
                 return;
             }
 
-            // 領用模式的品名為唯讀，仍顯示既有品名供使用者確認。
+            // 領用模式只能從「目前有庫存」的品項下拉選單選取，ID 由系統鎖定帶入。
             if (itemMatches.length > 0) {
                 nameEl.value = itemMatches[0].name || idVal;
                 populateBatchSelect(idVal, 'manualBatchSelect', 'outbound');
@@ -1582,6 +1705,7 @@ async function submitManual() {
         document.getElementById('manualPrice').value = '';
         document.getElementById('manualNote').value = '';
         document.getElementById('manualBatchSelect').innerHTML = '';
+        document.getElementById('manualOutboundNameSelect').value = '';
         scheduleBackgroundSync();
     } catch (error) {
         showAlert('送出失敗：' + error.message);
@@ -1596,6 +1720,7 @@ function filterItems() {
     const category = document.getElementById('categoryFilter').value;
     const status = document.getElementById('statusFilter').value;
     const lowStockOnly = document.getElementById('lowStockOnly').checked;
+    const showHiddenZeroItems = document.getElementById('showHiddenZeroItems').checked;
     const today = new Date().toISOString().split('T')[0];
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -1607,6 +1732,7 @@ function filterItems() {
         const matchCategory = !category || item.category === category;
         let matchStatus = true;
         let matchLowStock = true;
+        const matchHidden = showHiddenZeroItems || item.isHidden !== true;
 
         if (status === 'today' && !(item.last_stocktake >= today)) matchStatus = false;
         if (status === 'week' && !(item.last_stocktake >= weekAgo && item.last_stocktake < today)) matchStatus = false;
@@ -1616,10 +1742,26 @@ function filterItems() {
             const itemTotal = itemIndexes.totalsByName.get(item.name)?.qty || 0;
             if (itemTotal > (item.min_qty || 0)) matchLowStock = false;
         }
-        return matchSearch && matchCategory && matchStatus && matchLowStock;
+        return matchSearch && matchCategory && matchStatus && matchLowStock && matchHidden;
     });
 
     renderItems(filteredItems);
+}
+
+async function toggleZeroItemHidden(encodedId, isHidden) {
+    if (!(await ensureLiveInventoryReady())) return;
+    const id = decodeURIComponent(encodedId);
+    const verb = isHidden ? '隱藏' : '重新顯示';
+    if (!confirm(`確定要${verb}這張零庫存卡片嗎？`)) return;
+    try {
+        const res = await postApi({ action: 'setZeroItemHidden', id, isHidden });
+        applyMutationResponse(res);
+        if (!isHidden) document.getElementById('showHiddenZeroItems').checked = true;
+        filterItems();
+        showToast(`✅ ${res.message || `${verb}完成`}`, 'success');
+    } catch (error) {
+        showAlert(`${verb}失敗：${error.message}`);
+    }
 }
 
         function generateReport() {
@@ -1730,8 +1872,262 @@ async function saveThreshold(id, name) {
     }
 }
 
+function applyUserRoleUi() {
+    const button = document.getElementById('userManagementButton');
+    const adminNavButton = document.getElementById('adminNavButton');
+    const navGrid = document.getElementById('bottomNavGrid');
+    const isAdmin = CURRENT_USER_ROLE === 'admin';
+    if (button) button.classList.toggle('hidden', !isAdmin);
+    if (adminNavButton) adminNavButton.classList.toggle('hidden', !isAdmin);
+    if (navGrid) {
+        navGrid.classList.toggle('grid-cols-6', isAdmin);
+        navGrid.classList.toggle('grid-cols-5', !isAdmin);
+    }
+    const adminView = document.getElementById('adminView');
+    if (!isAdmin && adminView && !adminView.classList.contains('hidden')) {
+        adminView.classList.add('hidden');
+        document.getElementById('dashboardView').classList.remove('hidden');
+        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active', 'text-blue-600', 'bg-blue-50'));
+        document.querySelector('.nav-item')?.classList.add('active', 'text-blue-600', 'bg-blue-50');
+    }
+}
+
+function escapeManagementHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
+async function openUserManagement() {
+    if (CURRENT_USER_ROLE !== 'admin') {
+        showAlert('只有管理員可以使用此功能');
+        return;
+    }
+    const modal = document.getElementById('userManagementModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    await loadManagedUsers();
+}
+
+function closeUserManagement() {
+    const modal = document.getElementById('userManagementModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+async function loadManagedUsers() {
+    const list = document.getElementById('managedUsersList');
+    if (!list || CURRENT_USER_ROLE !== 'admin') return;
+    list.innerHTML = '<div class="text-center text-slate-400 py-6"><i class="fas fa-spinner fa-spin mr-1"></i>讀取中</div>';
+    try {
+        const res = await postApi({ action: 'listUsers' });
+        managedUsers = Array.isArray(res.users) ? res.users : [];
+        renderManagedUsers();
+    } catch (error) {
+        list.innerHTML = `<div class="text-center text-red-500 py-6 font-bold">${escapeManagementHtml(error.message)}</div>`;
+    }
+}
+
+function renderManagedUsers() {
+    const list = document.getElementById('managedUsersList');
+    if (!list) return;
+    if (managedUsers.length === 0) {
+        list.innerHTML = '<div class="text-center text-slate-400 py-6">尚無使用者</div>';
+        return;
+    }
+    list.innerHTML = managedUsers.map(user => {
+        const active = user.isActive === true;
+        const self = String(user.account) === String(CURRENT_USER_ACCOUNT);
+        const roleLabel = user.role === 'admin' ? '管理員' : '一般使用者';
+        const statusClass = active ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-100 text-slate-500 border-slate-200';
+        return `<div class="border border-gray-200 rounded-xl p-3 flex flex-col md:flex-row md:items-center gap-3 ${active ? 'bg-white' : 'bg-slate-50'}">
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap"><span class="font-black text-slate-800">${escapeManagementHtml(user.displayName)}</span>${self ? '<span class="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">目前帳號</span>' : ''}</div>
+                <div class="text-xs text-slate-500 mt-1"><span class="font-mono">${escapeManagementHtml(user.account)}</span><span class="mx-1.5">•</span>${roleLabel}<span class="ml-2 border px-1.5 py-0.5 rounded ${statusClass}">${active ? '已啟用' : '已停用'}</span></div>
+            </div>
+            <div class="flex gap-2 shrink-0">
+                <button onclick="openResetUserPassword(${Number(user.id)})" class="flex-1 md:flex-none px-3 py-2 text-xs font-bold bg-amber-50 text-amber-700 border border-amber-100 rounded-lg"><i class="fas fa-key mr-1"></i>重設密碼</button>
+                <button onclick="toggleManagedUser(${Number(user.id)}, ${active ? 'false' : 'true'})" ${self && active ? 'disabled' : ''} class="flex-1 md:flex-none px-3 py-2 text-xs font-bold rounded-lg border ${active ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'} disabled:opacity-40">${active ? '停用' : '啟用'}</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function createManagedUser() {
+    const account = document.getElementById('newUserAccount').value.trim();
+    const displayName = document.getElementById('newUserDisplayName').value.trim();
+    const password = document.getElementById('newUserPassword').value;
+    const role = document.getElementById('newUserRole').value;
+    if (!account || !password) {
+        showAlert('請輸入登入帳號與密碼');
+        return;
+    }
+    const button = document.getElementById('createUserButton');
+    button.disabled = true;
+    const original = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>新增中';
+    try {
+        const res = await postApi({ action: 'createUser', account, displayName, password, role });
+        managedUsers = Array.isArray(res.users) ? res.users : managedUsers;
+        renderManagedUsers();
+        document.getElementById('newUserAccount').value = '';
+        document.getElementById('newUserDisplayName').value = '';
+        document.getElementById('newUserPassword').value = '';
+        document.getElementById('newUserRole').value = 'user';
+        showToast(`✅ ${res.message || '使用者已新增'}`, 'success');
+    } catch (error) {
+        showAlert('新增失敗：' + error.message);
+    } finally {
+        button.disabled = false;
+        button.innerHTML = original;
+    }
+}
+
+async function toggleManagedUser(userId, isActive) {
+    const user = managedUsers.find(item => Number(item.id) === Number(userId));
+    if (!user) return;
+    const verb = isActive ? '啟用' : '停用';
+    if (!confirm(`確定要${verb}「${user.displayName}」嗎？`)) return;
+    try {
+        const res = await postApi({ action: 'setUserActive', userId, isActive });
+        managedUsers = Array.isArray(res.users) ? res.users : managedUsers;
+        renderManagedUsers();
+        showToast(`✅ ${res.message || `${verb}完成`}`, 'success');
+    } catch (error) {
+        showAlert(`${verb}失敗：${error.message}`);
+    }
+}
+
+function openResetUserPassword(userId) {
+    const user = managedUsers.find(item => Number(item.id) === Number(userId));
+    if (!user) return;
+    managedResetUserId = Number(userId);
+    document.getElementById('resetUserPasswordTarget').textContent = `${user.displayName}（${user.account}）`;
+    document.getElementById('managedResetPassword').value = '';
+    document.getElementById('managedResetPasswordConfirm').value = '';
+    const modal = document.getElementById('resetUserPasswordModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    setTimeout(() => document.getElementById('managedResetPassword').focus(), 50);
+}
+
+function closeResetUserPassword() {
+    const modal = document.getElementById('resetUserPasswordModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    managedResetUserId = null;
+}
+
+async function submitManagedPasswordReset() {
+    const userId = managedResetUserId;
+    const password = document.getElementById('managedResetPassword').value;
+    const confirmation = document.getElementById('managedResetPasswordConfirm').value;
+    if (!userId || !password) {
+        showAlert('新密碼不可空白');
+        return;
+    }
+    if (password !== confirmation) {
+        showAlert('兩次輸入的密碼不一致');
+        return;
+    }
+    const target = managedUsers.find(item => Number(item.id) === Number(userId));
+    const button = document.getElementById('resetUserPasswordButton');
+    button.disabled = true;
+    try {
+        const res = await postApi({ action: 'resetUserPassword', userId, password });
+        closeResetUserPassword();
+        if (target && String(target.account) === String(CURRENT_USER_ACCOUNT)) {
+            showAlert('自己的密碼已重設，請使用新密碼重新登入');
+            handleLogout();
+            return;
+        }
+        showToast(`✅ ${res.message || '密碼已重設'}`, 'success');
+    } catch (error) {
+        showAlert('重設失敗：' + error.message);
+    } finally {
+        button.disabled = false;
+    }
+}
+
+function renderAdminInventory() {
+    const container = document.getElementById('adminInventoryList');
+    if (!container) return;
+    if (CURRENT_USER_ROLE !== 'admin') {
+        container.innerHTML = '<div class="text-center text-red-500 py-6 font-bold">只有管理員可以使用此頁面</div>';
+        return;
+    }
+    const keyword = (document.getElementById('adminInventorySearch')?.value || '').trim().toLowerCase();
+    const rows = allItems
+        .filter(item => !keyword || item.name.toLowerCase().includes(keyword) || item.id.toLowerCase().includes(keyword) || item.lot.toLowerCase().includes(keyword))
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name, 'zh-TW') || a.id.localeCompare(b.id) || a.expiry.localeCompare(b.expiry));
+
+    if (rows.length === 0) {
+        container.innerHTML = '<div class="text-center text-gray-400 py-8 font-bold">查無庫存資料</div>';
+        return;
+    }
+
+    container.innerHTML = rows.map(item => `
+        <div class="border border-gray-200 rounded-xl p-3 bg-white shadow-sm">
+            <div class="flex items-start justify-between gap-2 mb-3">
+                <div class="min-w-0"><div class="font-black text-slate-800 truncate">${escapeManagementHtml(item.name)}</div><div class="font-mono text-[11px] text-slate-500 mt-0.5">ID: ${escapeManagementHtml(item.id)}</div></div>
+                ${item.isHidden ? '<span class="text-[10px] bg-slate-100 text-slate-500 border border-slate-200 px-2 py-1 rounded">首頁已隱藏</span>' : ''}
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div><label class="block text-[11px] font-bold text-slate-500 mb-1">LOT</label><input id="admin-lot-${item.rowId}" type="text" value="${escapeManagementHtml(item.lot)}" class="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm outline-none"></div>
+                <div><label class="block text-[11px] font-bold text-slate-500 mb-1">有效期限</label><input id="admin-expiry-${item.rowId}" type="date" value="${escapeManagementHtml(item.expiry)}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"></div>
+                <div><label class="block text-[11px] font-bold text-slate-500 mb-1">庫存量</label><div class="flex gap-2"><input id="admin-qty-${item.rowId}" type="number" min="0" step="1" value="${Number(item.qty) || 0}" class="min-w-0 flex-1 px-3 py-2 border border-gray-300 rounded-lg font-mono font-bold text-sm outline-none"><button id="admin-save-${item.rowId}" onclick="saveAdminInventoryRow(${item.rowId})" class="px-3 py-2 bg-indigo-600 text-white rounded-lg font-bold text-sm whitespace-nowrap"><i class="fas fa-save mr-1"></i>儲存</button></div></div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function saveAdminInventoryRow(rowId) {
+    if (CURRENT_USER_ROLE !== 'admin') {
+        showAlert('只有管理員可以修改庫存');
+        return;
+    }
+    const lot = document.getElementById(`admin-lot-${rowId}`).value.trim();
+    const expiry = document.getElementById(`admin-expiry-${rowId}`).value;
+    const qtyText = document.getElementById(`admin-qty-${rowId}`).value;
+    const qty = parseInt(qtyText, 10);
+    if (!Number.isInteger(qty) || qty < 0) {
+        showAlert('庫存量必須是 0 以上的整數');
+        return;
+    }
+    const item = allItems.find(row => Number(row.rowId) === Number(rowId));
+    if (!item) {
+        showAlert('找不到這筆庫存，請重新整理');
+        return;
+    }
+    if (!confirm(`確定修改「${item.name}」的 LOT、有效期限與庫存量嗎？`)) return;
+    const button = document.getElementById(`admin-save-${rowId}`);
+    button.disabled = true;
+    const original = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        const res = await postApi({ action: 'adminUpdateInventory', rowId, lot, expiry, qty });
+        if (!Array.isArray(res.items)) throw new Error('後端未回傳更新後庫存');
+        applyInventoryData({ items: res.items });
+        showToast(`✅ ${res.message || '庫存資料已更新'}`, 'success');
+    } catch (error) {
+        showAlert('修改失敗：' + error.message);
+    } finally {
+        const freshButton = document.getElementById(`admin-save-${rowId}`);
+        if (freshButton) {
+            freshButton.disabled = false;
+            freshButton.innerHTML = original;
+        }
+    }
+}
+
 
 async function switchTab(tab, sourceBtn = null) {
+    if (tab === 'admin' && CURRENT_USER_ROLE !== 'admin') {
+        showAlert('只有管理員可以使用管理者頁面');
+        return;
+    }
+    if (tab === 'admin' && !(await ensureLiveInventoryReady())) return;
     if (homeQrCode) { await toggleHomeScanner(); }
     if (html5QrCode) {
         try { if (html5QrCode.isScanning) await html5QrCode.stop(); } catch(e){}
@@ -1750,6 +2146,7 @@ async function switchTab(tab, sourceBtn = null) {
     if (tab === 'manual') toggleManualMode();
     if (tab === 'report') generateReport();
     if (tab === 'threshold') renderThresholds();
+    if (tab === 'admin') renderAdminInventory();
     window.scrollTo(0,0);
 }
 </script>

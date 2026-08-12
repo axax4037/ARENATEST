@@ -1700,3 +1700,7 @@ button, a, input, select { touch-action: manipulation; }
         @keyframes fadeInOut { 0% { opacity: 0; transform: translateY(-20px); } 15% { opacity: 1; transform: translateY(0); } 85% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-20px); } }
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) { .pb-safe { padding-bottom: calc(0.5rem + env(safe-area-inset-bottom)); } body { padding-bottom: calc(5rem + env(safe-area-inset-bottom)); } }
+
+/* 本專案未經 Tailwind 重新編譯時仍需使用的少量工具類別 */
+.grid-cols-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.opacity-60 { opacity: 0.6; }
