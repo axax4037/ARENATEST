@@ -257,12 +257,13 @@
     </div>
 
     <script>
-        // ⚠️ 請務必將此處替換為您最新的 Google Apps Script /exec 網址
-        const API_URL = "https://script.google.com/macros/s/AKfycbypbBGczyPbjs0nd_d0NasMaXi0UjZjspq3VhWuCb6LsJyXhMPI5FGSWRUBE1nME35TPA/exec";
+        // ⚠️ 部署 Cloudflare Worker 後，將下方網址替換成 Wrangler deploy 顯示的 workers.dev 網址
+        const API_URL = "https://shanshi-inventory-api.arenastone-tw.workers.dev";
         
         let allItems = [], filteredItems = [], scanMode = 'inbound', scannedData = null;
         let html5QrCode = null, homeQrCode = null, isScanningActive = false, isHomeScanningActive = false;
         let CURRENT_USER_NAME = "";
+        let CURRENT_SESSION_TOKEN = "";
         let lastScanTime = 0, sessionInterval = null;
         let modifiedScanIndices = new Set();
 
@@ -545,27 +546,39 @@ async function resilientFetch(url, options = {}, config = {}) {
 }
 
 async function parseApiJson(response) {
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const text = await response.text();
+    let data;
     try {
-        return JSON.parse(text);
+        data = text ? JSON.parse(text) : {};
     } catch (e) {
         throw new Error('伺服器回傳格式異常，請重新整理後再試');
     }
+    if (!response.ok) {
+        if (response.status === 401) {
+            throw new Error(data?.error || '登入已失效，請重新登入');
+        }
+        throw new Error(data?.error || data?.message || `HTTP ${response.status}`);
+    }
+    return data;
 }
 
 async function postApi(payload, options = {}) {
-    // 同一輪自動重試固定沿用 requestId；新版 Code.gs 會去重，避免重複入/出庫。
+    // 同一輪自動重試固定沿用 requestId；Cloudflare D1 版會用 request_results 去重。
     const requestId = payload?._requestId || createRequestId();
     const bodyPayload = { ...payload, _requestId: requestId };
     const action = String(payload?.action || '');
+    const isLogin = action === 'login';
+    if (!isLogin && !CURRENT_SESSION_TOKEN) throw new Error('登入已失效，請重新登入');
     const retries = Number.isInteger(options.retries)
         ? options.retries
         : (action === 'sendManualReport' ? 1 : API_POST_MAX_RETRIES);
 
+    const headers = { 'Content-Type': 'application/json;charset=utf-8' };
+    if (!isLogin) headers.Authorization = `Bearer ${CURRENT_SESSION_TOKEN}`;
+
     const response = await resilientFetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        headers,
         body: JSON.stringify(bodyPayload),
         cache: 'no-store'
     }, { timeoutMs: options.timeoutMs || API_POST_TIMEOUT_MS, retries });
@@ -626,13 +639,14 @@ function checkLoginSession() {
         try {
             const session = JSON.parse(sessionStr);
             const now = Date.now();
-            if (now - session.timestamp < 1800000) {
+            const serverExpiry = session.expiresAt ? Date.parse(session.expiresAt) : 0;
+            const stillValid = session.token && (serverExpiry ? now < serverExpiry : now - session.timestamp < 1800000);
+            if (stillValid) {
                 CURRENT_USER_NAME = session.name;
-                session.timestamp = now;
-                localStorage.setItem('SHANSHI_SESSION', JSON.stringify(session));
+                CURRENT_SESSION_TOKEN = session.token;
                 document.getElementById('currentUserTag').innerText = `👤 ${session.name}`;
                 document.getElementById('loginPortal').classList.add('hidden');
-                startSessionTimer(now);
+                startSessionTimer(session.timestamp || now, session.expiresAt || '');
                 hydrateInventoryCache();
                 loadData();
                 return;
@@ -642,12 +656,14 @@ function checkLoginSession() {
     handleLogout();
 }
 
-        function startSessionTimer(startTimestamp) {
+        function startSessionTimer(startTimestamp, expiresAt = '') {
             if(sessionInterval) clearInterval(sessionInterval);
             const timerEl = document.getElementById('sessionTimer');
+            const parsedExpiry = expiresAt ? Date.parse(expiresAt) : 0;
+            const deadline = Number.isFinite(parsedExpiry) && parsedExpiry > 0 ? parsedExpiry : startTimestamp + 1800000;
             timerEl.classList.remove('hidden');
             sessionInterval = setInterval(() => {
-                const diff = 1800000 - (Date.now() - startTimestamp);
+                const diff = deadline - Date.now();
                 if (diff <= 0) {
                     clearInterval(sessionInterval);
                     handleLogout();
@@ -671,11 +687,13 @@ async function handlePortalLogin() {
     try {
         const res = await postApi({ action: 'login', account: acc, password: pwd });
         CURRENT_USER_NAME = res.name;
+        CURRENT_SESSION_TOKEN = res.token || '';
+        if (!CURRENT_SESSION_TOKEN) throw new Error('伺服器未回傳登入憑證');
         document.getElementById('currentUserTag').innerText = `👤 ${res.name}`;
         document.getElementById('loginPortal').classList.add('hidden');
         const now = Date.now();
-        localStorage.setItem('SHANSHI_SESSION', JSON.stringify({ name: res.name, timestamp: now }));
-        startSessionTimer(now);
+        localStorage.setItem('SHANSHI_SESSION', JSON.stringify({ name: res.name, token: CURRENT_SESSION_TOKEN, timestamp: now, expiresAt: res.expiresAt || '' }));
+        startSessionTimer(now, res.expiresAt || '');
         hydrateInventoryCache();
         loadData();
     } catch(e) {
@@ -692,8 +710,13 @@ function handleLogout() {
     hasLiveInventory = false;
     inventorySyncPromise = null;
     document.getElementById('sessionTimer').classList.add('hidden');
+    const logoutToken = CURRENT_SESSION_TOKEN;
     localStorage.removeItem('SHANSHI_SESSION');
     CURRENT_USER_NAME = "";
+    CURRENT_SESSION_TOKEN = "";
+    if (logoutToken && API_URL && !API_URL.includes('REPLACE-WITH-YOUR-WORKER')) {
+        fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${logoutToken}` }, body: JSON.stringify({ action: 'logout', _requestId: createRequestId() }), keepalive: true }).catch(() => {});
+    }
     document.getElementById('currentUserTag').innerText = `👤 未登入`;
     document.getElementById('loginPortal').classList.remove('hidden');
     document.getElementById('loginAccount').value = "";
@@ -773,7 +796,11 @@ function handleLogout() {
         }
 
 async function fetchInventorySnapshot() {
-    const response = await resilientFetch(API_URL, { cache: 'no-store' }, {
+    if (!CURRENT_SESSION_TOKEN) throw new Error('登入已失效，請重新登入');
+    const response = await resilientFetch(API_URL, {
+        cache: 'no-store',
+        headers: { 'Authorization': `Bearer ${CURRENT_SESSION_TOKEN}` }
+    }, {
         timeoutMs: API_GET_TIMEOUT_MS,
         retries: API_GET_MAX_RETRIES
     });
@@ -1553,6 +1580,7 @@ async function submitManual() {
         document.getElementById('manualExpiry').value = '';
         document.getElementById('manualQty').value = '';
         document.getElementById('manualPrice').value = '';
+        document.getElementById('manualNote').value = '';
         document.getElementById('manualBatchSelect').innerHTML = '';
         scheduleBackgroundSync();
     } catch (error) {

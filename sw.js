@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shanshi-static-v20260812-3';
+const CACHE_NAME = 'shanshi-static-v20260812-d1-3';
 const CORE_ASSETS = ['./', './index.html', './app.css'];
 
 self.addEventListener('install', event => {
@@ -21,7 +21,7 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
-  // 只處理 GitHub Pages 同網域靜態檔，不碰 Google Apps Script API。
+  // 只處理 GitHub Pages 同網域靜態檔，不碰 Cloudflare Worker API。
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === 'navigate') {
