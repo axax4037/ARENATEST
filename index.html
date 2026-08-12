@@ -162,7 +162,7 @@
                         <div><label class="block text-xs font-bold text-slate-600 mb-1.5 ml-1">作業類型</label><select id="manualType" onchange="toggleManualMode()" class="w-full px-4 py-3 border-2 border-indigo-100 rounded-xl font-bold text-indigo-900 outline-none text-sm"><option value="入庫">📥 入庫建檔</option><option value="領用">📤 領用扣帳</option></select></div>
                         <div><label class="block text-xs font-bold text-slate-600 mb-1.5 ml-1">自訂 ID / 代碼 <span class="text-red-500">*</span></label><input type="text" id="manualId" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl font-mono font-bold outline-none text-sm" list="existing-ids-list" oninput="autoFillManual()"></div>
                         <datalist id="existing-ids-list"></datalist>
-                        <div><label class="block text-xs font-bold text-slate-600 mb-1.5 ml-1">品項名稱</label><input type="text" id="manualName" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-slate-600 text-sm outline-none"></div>
+                        <div><label class="block text-xs font-bold text-slate-600 mb-1.5 ml-1">品項名稱</label><input type="text" id="manualName" placeholder="若無輸入將帶入ID" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-slate-600 text-sm outline-none"></div>
                     </div>
                     <div id="manualBatchContainer" class="hidden px-2"><label class="block text-xs font-bold text-indigo-600 mb-1.5 ml-1">選擇指定扣帳批次</label><select id="manualBatchSelect" class="w-full px-4 py-2.5 border-2 border-indigo-200 rounded-xl font-bold text-slate-700 text-sm outline-none"></select></div>
                     <div id="manualDetailsContainer" class="grid grid-cols-2 gap-3 px-2">
@@ -272,6 +272,9 @@
         let hasLiveInventory = false;
         let inventorySyncPromise = null;
         let backgroundSyncTimer = null;
+        let backgroundSyncRunning = false;
+        let backgroundSyncPending = false;
+        let inventoryCacheSaveTimer = null;
         let qrLibraryPromise = null;
         let syncStateHideTimer = null;
         let filterDebounceTimer = null;
@@ -280,8 +283,9 @@
 
         // API 韌性設定：iOS/Safari 偶發 TypeError: Load failed 時採有限重試。
         const API_GET_TIMEOUT_MS = 18000;
-        const API_POST_TIMEOUT_MS = 28000;
-        const API_MAX_RETRIES = 2;
+        const API_POST_TIMEOUT_MS = 22000;
+        const API_GET_MAX_RETRIES = 2;
+        const API_POST_MAX_RETRIES = 1;
 
         // 效能索引：每次取得最新庫存後只建立一次，避免畫面操作時反覆掃描 allItems。
         const itemIndexes = {
@@ -413,11 +417,38 @@ async function ensureLiveInventoryReady() {
     }
 }
 
-function scheduleBackgroundSync(delay = 350) {
+function scheduleInventoryCacheSave(delay = 120) {
+    if (inventoryCacheSaveTimer) clearTimeout(inventoryCacheSaveTimer);
+    inventoryCacheSaveTimer = setTimeout(() => {
+        inventoryCacheSaveTimer = null;
+        saveInventoryCache();
+    }, delay);
+}
+
+async function flushBackgroundSync() {
+    if (backgroundSyncRunning) {
+        backgroundSyncPending = true;
+        return;
+    }
+    if (!backgroundSyncPending) return;
+
+    backgroundSyncPending = false;
+    backgroundSyncRunning = true;
+    try {
+        await loadDataSilent();
+    } finally {
+        backgroundSyncRunning = false;
+        // 同步進行期間若又有新異動，再補一次 GET；多筆連續操作仍只會合併成必要的最少次數。
+        if (backgroundSyncPending) scheduleBackgroundSync(250);
+    }
+}
+
+function scheduleBackgroundSync(delay = 800) {
+    backgroundSyncPending = true;
     if (backgroundSyncTimer) clearTimeout(backgroundSyncTimer);
     backgroundSyncTimer = setTimeout(() => {
         backgroundSyncTimer = null;
-        loadDataSilent();
+        flushBackgroundSync();
     }, delay);
 }
 
@@ -426,10 +457,11 @@ function refreshCurrentViews() {
     updateDashboard();
     updateCategoryFilter();
     updateManualIdList();
+    // 隱藏中的首頁不預先重畫，避免存檔成功後還花時間建立大量 DOM；切回首頁時會立即 render。
     if (!document.getElementById('dashboardView').classList.contains('hidden')) filterItems();
     if (!document.getElementById('thresholdView').classList.contains('hidden')) renderThresholds();
     if (!document.getElementById('reportView').classList.contains('hidden')) generateReport();
-    saveInventoryCache();
+    scheduleInventoryCacheSave();
 }
 
 function mergeUpdatedItems(updatedItems) {
@@ -484,7 +516,7 @@ function isRetryableRequestError(error) {
 
 async function resilientFetch(url, options = {}, config = {}) {
     const timeoutMs = config.timeoutMs || API_GET_TIMEOUT_MS;
-    const retries = Number.isInteger(config.retries) ? config.retries : API_MAX_RETRIES;
+    const retries = Number.isInteger(config.retries) ? config.retries : API_GET_MAX_RETRIES;
     let lastError = null;
 
     for (let attempt = 0; attempt <= retries; attempt++) {
@@ -529,7 +561,7 @@ async function postApi(payload, options = {}) {
     const action = String(payload?.action || '');
     const retries = Number.isInteger(options.retries)
         ? options.retries
-        : (action === 'sendManualReport' ? 1 : API_MAX_RETRIES);
+        : (action === 'sendManualReport' ? 1 : API_POST_MAX_RETRIES);
 
     const response = await resilientFetch(API_URL, {
         method: 'POST',
@@ -743,7 +775,7 @@ function handleLogout() {
 async function fetchInventorySnapshot() {
     const response = await resilientFetch(API_URL, { cache: 'no-store' }, {
         timeoutMs: API_GET_TIMEOUT_MS,
-        retries: API_MAX_RETRIES
+        retries: API_GET_MAX_RETRIES
     });
     const data = await parseApiJson(response);
     if (data?.success === false) throw new Error(data.error || '庫存讀取失敗');
@@ -1283,7 +1315,12 @@ async function submitScan() {
         document.getElementById('scanResult').classList.add('hidden');
         document.getElementById('scanNote').value = '';
         scheduleBackgroundSync();
-        await startScanner();
+
+        // 寫入已成功就立刻恢復按鈕；相機重啟放到下一個非阻塞流程，不再讓按鈕陪著轉。
+        btn.disabled = false;
+        btn.innerText = '確認送出';
+        startScanner().catch(() => {});
+        return;
     } catch (error) {
         showAlert('送出失敗：' + error.message);
     } finally {
@@ -1422,20 +1459,46 @@ async function startScanner() {
 
         function toggleManualMode() {
             const mode = document.getElementById('manualType').value;
+            const nameEl = document.getElementById('manualName');
             if(mode === '入庫') {
-                document.getElementById('manualDetailsContainer').classList.remove('hidden'); document.getElementById('manualPriceContainer').classList.remove('hidden'); document.getElementById('manualBatchContainer').classList.add('hidden'); document.getElementById('manualName').readOnly = false; document.getElementById('manualName').classList.remove('bg-gray-100');
+                document.getElementById('manualDetailsContainer').classList.remove('hidden');
+                document.getElementById('manualPriceContainer').classList.remove('hidden');
+                document.getElementById('manualBatchContainer').classList.add('hidden');
+                nameEl.readOnly = false;
+                nameEl.classList.remove('bg-gray-100');
+                // 入庫模式不自動顯示 ID 對應品名；使用者可自行輸入，空白送出時再以 ID 作為品名。
+                nameEl.value = '';
             } else {
-                document.getElementById('manualDetailsContainer').classList.add('hidden'); document.getElementById('manualPriceContainer').classList.add('hidden'); document.getElementById('manualBatchContainer').classList.remove('hidden'); document.getElementById('manualName').readOnly = true; document.getElementById('manualName').classList.add('bg-gray-100');
+                document.getElementById('manualDetailsContainer').classList.add('hidden');
+                document.getElementById('manualPriceContainer').classList.add('hidden');
+                document.getElementById('manualBatchContainer').classList.remove('hidden');
+                nameEl.readOnly = true;
+                nameEl.classList.add('bg-gray-100');
             }
             autoFillManual(); 
         }
 
         function autoFillManual() {
-            const idVal = document.getElementById('manualId').value; const mode = document.getElementById('manualType').value; const itemMatches = itemIndexes.byId.get(idVal) || [];
+            const idVal = document.getElementById('manualId').value;
+            const mode = document.getElementById('manualType').value;
+            const itemMatches = itemIndexes.byId.get(idVal) || [];
+            const nameEl = document.getElementById('manualName');
+
+            if (mode === '入庫') {
+                // 僅查找既有價格，不同步填入品名，避免使用者輸入 ID 時品名欄跟著變動。
+                document.getElementById('manualPrice').value = itemMatches.length > 0 ? (itemMatches[0].price || '') : '';
+                document.getElementById('manualBatchSelect').innerHTML = '';
+                return;
+            }
+
+            // 領用模式的品名為唯讀，仍顯示既有品名供使用者確認。
             if (itemMatches.length > 0) {
-                document.getElementById('manualName').value = itemMatches[0].name || idVal;
-                if (mode === '入庫') document.getElementById('manualPrice').value = itemMatches[0].price || ''; else populateBatchSelect(idVal, 'manualBatchSelect', 'outbound');
-            } else { document.getElementById('manualName').value = idVal; document.getElementById('manualPrice').value = ''; document.getElementById('manualBatchSelect').innerHTML = ''; }
+                nameEl.value = itemMatches[0].name || idVal;
+                populateBatchSelect(idVal, 'manualBatchSelect', 'outbound');
+            } else {
+                nameEl.value = '';
+                document.getElementById('manualBatchSelect').innerHTML = '';
+            }
         }
 
 async function submitManual() {
@@ -1624,11 +1687,8 @@ async function saveThreshold(id, name) {
     btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
     try {
-        await postApi({ action: 'updateThreshold', id, minQty: newQty });
-        allItems.forEach(item => {
-            if (item.id === id) item.min_qty = newQty;
-        });
-        refreshCurrentViews();
+        const res = await postApi({ action: 'updateThreshold', id, minQty: newQty });
+        applyMutationResponse(res);
         showToast(`✅ 更新成功！`, "success");
         scheduleBackgroundSync();
     } catch(err) {
@@ -1658,6 +1718,7 @@ async function switchTab(tab, sourceBtn = null) {
     document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active', 'text-blue-600', 'bg-blue-50'));
     if (sourceBtn) sourceBtn.classList.add('active', 'text-blue-600', 'bg-blue-50');
 
+    if (tab === 'dashboard') filterItems();
     if (tab === 'manual') toggleManualMode();
     if (tab === 'report') generateReport();
     if (tab === 'threshold') renderThresholds();
