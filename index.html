@@ -213,16 +213,23 @@
                             <div><h3 class="font-bold text-indigo-800 text-sm mb-1">即時發送本月結算</h3></div>
                             <button onclick="triggerManualReport()" id="btnManualReport" class="w-full py-2.5 bg-indigo-600 text-white rounded-lg font-bold shadow-sm mt-3 text-sm">立即寄發本月報表</button>
                         </div>
-                        <div class="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 flex flex-col justify-between">
+                        <div id="autoReportAdminOnlyNotice" class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-center text-center">
+                            <div><i class="fas fa-user-shield text-slate-400 text-xl mb-2"></i><p class="text-sm font-bold text-slate-600">自動寄送僅限管理員設定</p></div>
+                        </div>
+                        <div id="autoReportAdminPanel" class="hidden bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 flex-col justify-between">
                             <div>
                                 <h3 class="font-bold text-emerald-800 text-sm mb-1">每月自動發送設定</h3>
+                                <p id="autoReportSubscriptionStatus" class="text-xs font-bold text-slate-600 bg-white border border-emerald-100 rounded-lg px-3 py-2 mt-2">讀取訂閱狀態中…</p>
                                 <div class="flex items-center gap-2 mt-2">
                                     <span class="text-xs font-bold">固定於每月</span>
                                     <select id="autoReportDay" class="px-2 py-1 border border-emerald-200 rounded-md text-sm font-bold"><option value="1">1</option><option value="5" selected>5</option><option value="10">10</option></select>
                                     <span class="text-xs font-bold">日寄出</span>
                                 </div>
                             </div>
-                            <button onclick="saveAutoSchedule()" id="btnAutoSchedule" class="w-full py-2.5 bg-emerald-600 text-white rounded-lg font-bold shadow-sm mt-3 text-sm">儲存排程設定</button>
+                            <div class="grid grid-cols-1 gap-2 mt-3">
+                                <button onclick="saveAutoSchedule()" id="btnAutoSchedule" class="w-full py-2.5 bg-emerald-600 text-white rounded-lg font-bold shadow-sm text-sm">儲存排程設定</button>
+                                <button onclick="cancelAutoSchedule()" id="btnCancelAutoSchedule" class="hidden w-full py-2.5 bg-white text-red-600 border border-red-200 rounded-lg font-bold text-sm">取消訂閱</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -277,13 +284,13 @@
     </div>
 
     <!-- 管理員限定：使用者管理 -->
-    <div id="userManagementModal" class="fixed inset-0 modal-overlay hidden items-center justify-center z-[90] p-3 md:p-5">
-        <div class="bg-white rounded-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-2xl border border-gray-100">
-            <div class="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex justify-between items-center z-10">
+    <div id="userManagementModal" class="fixed inset-0 modal-overlay mobile-modal-overlay hidden z-[90] p-3 md:p-5">
+        <div class="mobile-modal-panel bg-white rounded-2xl w-full max-w-3xl shadow-2xl border border-gray-100">
+            <div class="mobile-modal-header bg-white border-b border-gray-100 px-4 py-3 flex justify-between items-center z-10">
                 <div><h2 class="font-black text-slate-800"><i class="fas fa-users-cog text-indigo-600 mr-2"></i>使用者管理</h2><p class="text-[11px] text-slate-500 mt-0.5">只有管理員可以查看與修改</p></div>
                 <button onclick="closeUserManagement()" class="w-9 h-9 rounded-full bg-slate-100 text-slate-600 active:scale-95" aria-label="關閉"><i class="fas fa-times"></i></button>
             </div>
-            <div class="p-4 space-y-5">
+            <div class="mobile-modal-body p-4 space-y-5">
                 <section class="bg-indigo-50/60 border border-indigo-100 rounded-xl p-4 space-y-3">
                     <h3 class="font-bold text-indigo-900 text-sm"><i class="fas fa-user-plus mr-1"></i>新增使用者</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1803,13 +1810,69 @@ async function toggleZeroItemHidden(encodedId, isHidden) {
         }
 
         async function saveAutoSchedule() {
+            if (CURRENT_USER_ROLE !== 'admin') { showAlert("只有管理員可以設定自動寄送報表"); return; }
             const email = document.getElementById('reportEmail').value.trim(); const day = document.getElementById('autoReportDay').value;
             if (!email || !email.includes('@')) { showAlert("請輸入正確信箱！"); return; } if (!CURRENT_USER_NAME) { showAlert("請先登入！"); return; }
             const btn = document.getElementById('btnAutoSchedule'); const originalText = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 儲存中...';
             try {
-                await postApi({ action: 'setAutoSchedule', email: email, day: day });
-                showToast(`✅ 每月 ${day} 號自動寄出！`, "success");
+                const result = await postApi({ action: 'setAutoSchedule', email: email, day: day });
+                renderAutoScheduleStatus(result);
+                showToast(`✅ ${email} 已訂閱`, "success");
             } catch(err) { showAlert("設定失敗：" + err.message); } finally { btn.disabled = false; btn.innerHTML = originalText; }
+        }
+
+        function renderAutoScheduleStatus(schedule = {}) {
+            const status = document.getElementById('autoReportSubscriptionStatus');
+            const cancelButton = document.getElementById('btnCancelAutoSchedule');
+            if (!status || !cancelButton) return;
+            const subscribed = schedule.subscribed === true && schedule.email;
+            if (subscribed) {
+                const day = Number.parseInt(schedule.day, 10);
+                status.textContent = `${schedule.email} 已訂閱${day ? `，每月 ${day} 日自動寄送` : ''}`;
+                status.className = 'text-xs font-bold text-emerald-700 bg-white border border-emerald-200 rounded-lg px-3 py-2 mt-2 break-words';
+                document.getElementById('reportEmail').value = schedule.email;
+                if (day) {
+                    const select = document.getElementById('autoReportDay');
+                    if (![...select.options].some(option => Number(option.value) === day)) select.add(new Option(String(day), String(day)));
+                    select.value = String(day);
+                }
+                cancelButton.classList.remove('hidden');
+            } else {
+                status.textContent = '尚未訂閱自動報表';
+                status.className = 'text-xs font-bold text-slate-600 bg-white border border-emerald-100 rounded-lg px-3 py-2 mt-2';
+                cancelButton.classList.add('hidden');
+            }
+        }
+
+        async function loadAutoSchedule() {
+            if (CURRENT_USER_ROLE !== 'admin') return;
+            const status = document.getElementById('autoReportSubscriptionStatus');
+            if (status) status.textContent = '讀取訂閱狀態中…';
+            try {
+                renderAutoScheduleStatus(await postApi({ action: 'getAutoSchedule' }));
+            } catch (err) {
+                if (status) status.textContent = `讀取失敗：${err.message}`;
+            }
+        }
+
+        async function cancelAutoSchedule() {
+            if (CURRENT_USER_ROLE !== 'admin') { showAlert("只有管理員可以取消自動寄送報表"); return; }
+            if (!window.confirm('確定要取消自動報表訂閱嗎？')) return;
+            const btn = document.getElementById('btnCancelAutoSchedule');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 取消中...';
+            try {
+                const result = await postApi({ action: 'cancelAutoSchedule' });
+                document.getElementById('reportEmail').value = '';
+                renderAutoScheduleStatus(result);
+                showToast('已取消自動報表訂閱', 'success');
+            } catch (err) {
+                showAlert('取消訂閱失敗：' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
         }
 
         // ==========================================
@@ -1876,9 +1939,16 @@ function applyUserRoleUi() {
     const button = document.getElementById('userManagementButton');
     const adminNavButton = document.getElementById('adminNavButton');
     const navGrid = document.getElementById('bottomNavGrid');
+    const autoReportPanel = document.getElementById('autoReportAdminPanel');
+    const autoReportNotice = document.getElementById('autoReportAdminOnlyNotice');
     const isAdmin = CURRENT_USER_ROLE === 'admin';
     if (button) button.classList.toggle('hidden', !isAdmin);
     if (adminNavButton) adminNavButton.classList.toggle('hidden', !isAdmin);
+    if (autoReportPanel) {
+        autoReportPanel.classList.toggle('hidden', !isAdmin);
+        autoReportPanel.classList.toggle('flex', isAdmin);
+    }
+    if (autoReportNotice) autoReportNotice.classList.toggle('hidden', isAdmin);
     if (navGrid) {
         navGrid.classList.toggle('grid-cols-6', isAdmin);
         navGrid.classList.toggle('grid-cols-5', !isAdmin);
@@ -1904,7 +1974,17 @@ async function openUserManagement() {
     const modal = document.getElementById('userManagementModal');
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+    syncModalPageLock();
     await loadManagedUsers();
+}
+
+function syncModalPageLock() {
+    const modalIds = ['userManagementModal', 'resetUserPasswordModal'];
+    const hasOpenModal = modalIds.some(id => {
+        const modal = document.getElementById(id);
+        return modal && !modal.classList.contains('hidden');
+    });
+    document.body.classList.toggle('modal-page-locked', hasOpenModal);
 }
 
 function closeUserManagement() {
@@ -1912,6 +1992,7 @@ function closeUserManagement() {
     if (!modal) return;
     modal.classList.add('hidden');
     modal.classList.remove('flex');
+    syncModalPageLock();
 }
 
 async function loadManagedUsers() {
@@ -2007,6 +2088,7 @@ function openResetUserPassword(userId) {
     const modal = document.getElementById('resetUserPasswordModal');
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+    syncModalPageLock();
     setTimeout(() => document.getElementById('managedResetPassword').focus(), 50);
 }
 
@@ -2016,6 +2098,7 @@ function closeResetUserPassword() {
     modal.classList.add('hidden');
     modal.classList.remove('flex');
     managedResetUserId = null;
+    syncModalPageLock();
 }
 
 async function submitManagedPasswordReset() {
@@ -2144,7 +2227,10 @@ async function switchTab(tab, sourceBtn = null) {
 
     if (tab === 'dashboard') filterItems();
     if (tab === 'manual') toggleManualMode();
-    if (tab === 'report') generateReport();
+    if (tab === 'report') {
+        generateReport();
+        if (CURRENT_USER_ROLE === 'admin') await loadAutoSchedule();
+    }
     if (tab === 'threshold') renderThresholds();
     if (tab === 'admin') renderAdminInventory();
     window.scrollTo(0,0);

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shanshi-static-v20260812-d1-5';
+const CACHE_NAME = 'shanshi-static-v20260814-d1-6';
 const CORE_ASSETS = ['./', './index.html', './app.css'];
 
 self.addEventListener('install', event => {

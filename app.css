@@ -1704,3 +1704,38 @@ button, a, input, select { touch-action: manipulation; }
 /* 本專案未經 Tailwind 重新編譯時仍需使用的少量工具類別 */
 .grid-cols-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .opacity-60 { opacity: 0.6; }
+
+/* 手機版管理視窗：標題／關閉鈕固定，只有內容區捲動。 */
+body.modal-page-locked { overflow: hidden; }
+#userManagementModal { z-index: 90; }
+#resetUserPasswordModal { z-index: 95; }
+#alertModal { z-index: 100; }
+.mobile-modal-overlay {
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+.mobile-modal-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 1.5rem);
+  max-height: calc(100dvh - max(1.5rem, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
+  overflow: hidden;
+}
+.mobile-modal-header { flex: 0 0 auto; }
+.mobile-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 48rem) {
+  .mobile-modal-overlay { align-items: center; }
+  .mobile-modal-panel { max-height: min(92vh, calc(100dvh - 2.5rem)); }
+}
