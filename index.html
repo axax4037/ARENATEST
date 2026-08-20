@@ -784,8 +784,13 @@ async function syncInventory({ silentMode = false, showIndicator = false } = {})
 
     inventorySyncPromise = (async () => {
         const data = await fetchInventorySnapshot();
+        const alreadyLive = hasLiveInventory;
         applyInventoryData(data, silentMode);
         hasLiveInventory = true;
+        if (!alreadyLive) {
+            loadAnomalyCenter();
+            loadAnalyticsSummary();
+        }
         setSyncState('synced');
         return data;
     })();
