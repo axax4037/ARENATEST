@@ -784,13 +784,8 @@ async function syncInventory({ silentMode = false, showIndicator = false } = {})
 
     inventorySyncPromise = (async () => {
         const data = await fetchInventorySnapshot();
-        const alreadyLive = hasLiveInventory;
         applyInventoryData(data, silentMode);
         hasLiveInventory = true;
-        if (!alreadyLive) {
-            loadAnomalyCenter();
-            loadAnalyticsSummary();
-        }
         setSyncState('synced');
         return data;
     })();
@@ -814,6 +809,7 @@ async function loadDataSilent() {
 async function loadData() {
     try {
         await syncInventory({ silentMode: false, showIndicator: true });
+        await Promise.all([loadAnomalyCenter(), loadAnalyticsSummary()]);
     } catch (error) {
         if (allItems.length === 0) {
             showAlert('目前無法取得即時庫存。\n' + error.message);
