@@ -1776,6 +1776,7 @@ button:disabled, input:disabled, select:disabled { cursor:not-allowed; opacity:.
 
 /* ===== Commercial v4 responsive optimization ===== */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{overflow-x:hidden}img,svg,video,canvas{max-width:100%;height:auto}header h1{min-width:0}header>div>div{min-width:0}#currentUserTag{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.nav-item{min-width:0;min-height:52px}.nav-item span{line-height:1.15;text-align:center}.v4-panel,.inventory-card-v4,.admin-item-v4{min-width:0}.batch-main,.batch-main>div,.stocktake-line>div{min-width:0}.batch-actions{flex-wrap:wrap}.admin-item-title{flex-wrap:wrap}.admin-item-title span{overflow-wrap:anywhere}.trend-chart{-webkit-overflow-scrolling:touch;scrollbar-width:thin}.admin-tabs-scroll{-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.login-brand-logo{display:block;width:100%;max-width:360px;height:auto;margin:0 auto}.site-brand{display:block;flex:0 1 270px;min-width:0;margin-right:.75rem}.header-brand-logo{display:block;width:100%;max-width:270px;height:auto;max-height:48px;object-fit:contain;object-position:left center}
 
 @media(min-width:1024px){
   #itemsList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;align-items:start}
@@ -1789,6 +1790,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{overflow-x:hidden}
 @media(max-width:900px){
   header>div{gap:.5rem;padding-left:.75rem!important;padding-right:.75rem!important}
   #currentUserTag{max-width:150px}
+  .site-brand{flex-basis:210px}.header-brand-logo{max-width:210px;max-height:42px}
   .admin-batch-row{grid-template-columns:repeat(2,minmax(0,1fr))}
   .admin-batch-row .batch-location-summary{grid-column:1/-1}
   .admin-batch-row .qty-readonly{white-space:normal}
@@ -1800,6 +1802,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{overflow-x:hidden}
   #mainContent{padding:.75rem .65rem 6.25rem}
   header>div{padding-top:.55rem!important;padding-bottom:.55rem!important}
   header h1{font-size:.9rem;max-width:42%}
+  .site-brand{flex-basis:42%;margin-right:.25rem}.header-brand-logo{max-height:34px}
   #currentUserTag{max-width:105px;padding:.3rem .4rem;font-size:.6rem}
   #sessionTimer{font-size:.58rem;padding:.3rem .35rem}
   #scanManualDetails,#manualDetailsContainer{grid-template-columns:1fr}
@@ -1828,6 +1831,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{overflow-x:hidden}
 
 @media(max-width:480px){
   header h1{max-width:34%;font-size:.82rem}
+  .site-brand{flex-basis:34%}.header-brand-logo{max-height:30px}
   header h1 i{margin-right:.25rem!important}
   header>div>div{gap:.25rem!important}
   #currentUserTag{max-width:82px}

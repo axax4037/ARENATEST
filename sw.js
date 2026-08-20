@@ -1,4 +1,4 @@
-const CACHE_NAME = 'arenastone-static-v20260820-commercial-v4-11';
+const CACHE_NAME = 'arenastone-static-v20260820-commercial-v4-12';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -7,7 +7,8 @@ const CORE_ASSETS = [
   './favicon.ico',
   './icon-192.png',
   './icon-512.png',
-  './apple-touch-icon.png'
+  './apple-touch-icon.png',
+  './logo-full.png'
 ];
 
 self.addEventListener('install', event => {
