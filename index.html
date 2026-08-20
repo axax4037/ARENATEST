@@ -615,14 +615,14 @@ async function postApi(payload, options = {}) {
     const requestId = payload?._requestId || createRequestId();
     const bodyPayload = { ...payload, _requestId: requestId };
     const action = String(payload?.action || '');
-    const isLogin = action === 'login';
-    if (!isLogin && !CURRENT_SESSION_TOKEN) throw new Error('登入已失效，請重新登入');
+    const isPublicAuth = action === 'login' || action === 'loginChallenge';
+    if (!isPublicAuth && !CURRENT_SESSION_TOKEN) throw new Error('登入已失效，請重新登入');
     const retries = Number.isInteger(options.retries)
         ? options.retries
         : (action === 'sendManualReport' ? 1 : API_POST_MAX_RETRIES);
 
     const headers = { 'Content-Type': 'application/json;charset=utf-8' };
-    if (!isLogin) headers.Authorization = `Bearer ${CURRENT_SESSION_TOKEN}`;
+    if (!isPublicAuth) headers.Authorization = `Bearer ${CURRENT_SESSION_TOKEN}`;
 
     const response = await resilientFetch(API_URL, {
         method: 'POST',
