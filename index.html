@@ -60,6 +60,10 @@
         
         <!-- ======================= 1. 首頁總覽 ======================= -->
         <div id="dashboardView" class="space-y-3 animate-fade-in">
+            <section class="dashboard-location-switch" aria-label="總覽庫位切換">
+                <div class="dashboard-location-heading"><span><i class="fas fa-warehouse"></i> 庫位檢視</span><small id="dashboardLocationHint">目前顯示：全部庫位</small></div>
+                <select id="dashboardLocationFilter" onchange="setDashboardLocationFilter()" aria-label="選擇總覽庫位"><option value="0">全部庫位</option></select>
+            </section>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
                 <button onclick="applyDashboardMetricFilter('all')" class="metric-card bg-white p-3 rounded-lg shadow-sm border border-gray-300 text-left">
                     <div class="text-gray-500 text-[11px] font-semibold mb-0.5 flex items-center gap-1"><i class="fas fa-cubes"></i> 總品項</div>
@@ -77,16 +81,6 @@
                     <div class="text-gray-500 text-[11px] font-semibold mb-0.5 flex items-center gap-1"><i class="fas fa-exclamation-triangle text-red-500"></i> 低庫存警示</div>
                     <div id="lowStockCount" class="text-xl font-black text-red-600">-</div><div class="text-[9px] text-slate-400 mt-1">點擊篩選</div>
                 </button>
-            </div>
-
-            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                <div class="text-[11px] font-bold text-slate-500 mb-2">快速作業</div>
-                <div class="grid grid-cols-4 gap-2">
-                    <button onclick="switchTab('stocktake')" class="quick-action-btn bg-amber-50 text-amber-800 border-amber-200"><i class="fas fa-clipboard-check"></i><span>快速盤點</span></button>
-                    <button onclick="openManualAction('入庫')" class="quick-action-btn bg-blue-50 text-blue-800 border-blue-200"><i class="fas fa-arrow-circle-down"></i><span>快速入庫</span></button>
-                    <button onclick="openManualAction('領用')" class="quick-action-btn bg-rose-50 text-rose-800 border-rose-200"><i class="fas fa-arrow-circle-up"></i><span>快速領用</span></button>
-                    <button onclick="document.getElementById('searchInput').focus()" class="quick-action-btn bg-slate-50 text-slate-700 border-slate-200"><i class="fas fa-search"></i><span>查詢庫存</span></button>
-                </div>
             </div>
 
             <div class="bg-slate-800 p-3 rounded-lg shadow-md text-white flex flex-col gap-2 relative overflow-hidden">
@@ -117,7 +111,6 @@
                     <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-sm"></i>
                 </div>
                 <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                    <select id="dashboardLocationFilter" onchange="setDashboardLocationFilter()" class="px-2 py-1.5 bg-blue-50 border border-blue-200 rounded text-xs font-bold outline-none"><option value="0">全部儲位</option></select>
                     <select id="categoryFilter" onchange="filterItems()" class="px-2 py-1.5 bg-gray-50 border border-gray-300 rounded text-xs font-medium outline-none"><option value="">全部分類</option></select>
                     <select id="statusFilter" onchange="filterItems()" class="px-2 py-1.5 bg-gray-50 border border-gray-300 rounded text-xs font-medium outline-none">
                         <option value="">全部狀態</option><option value="today">今日已盤點</option><option value="week">7 天內已盤點</option><option value="overdue">超過 7 天未盤點</option>
@@ -316,17 +309,17 @@
 
     </main>
 
-    <!-- 底部導航列 (改為 5 個按鈕) -->
+    <!-- 統一作業入口：快速作業已整合至底部導航列 -->
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 pb-safe">
         <div class="max-w-6xl mx-auto grid grid-cols-6 py-1.5 px-1">
             <button onclick="switchTab('dashboard', this)" class="nav-item active flex flex-col items-center py-2 rounded-lg hover:bg-blue-50 transition-colors">
                 <i class="fas fa-home text-lg mb-1"></i><span class="text-[10px] font-bold">總覽</span>
             </button>
             <button onclick="switchTab('scanner', this)" class="nav-item flex flex-col items-center py-2 rounded-lg hover:bg-blue-50 transition-colors">
-                <i class="fas fa-barcode text-lg mb-1"></i><span class="text-[10px] font-bold">掃碼</span>
+                <i class="fas fa-barcode text-lg mb-1"></i><span class="text-[10px] font-bold">掃碼作業</span>
             </button>
             <button onclick="switchTab('manual', this)" class="nav-item flex flex-col items-center py-2 rounded-lg hover:bg-blue-50 transition-colors">
-                <i class="fas fa-keyboard text-lg mb-1"></i><span class="text-[10px] font-bold">手動</span>
+                <i class="fas fa-keyboard text-lg mb-1"></i><span class="text-[10px] font-bold">手動作業</span>
             </button>
             <button onclick="switchTab('stocktake', this)" class="nav-item flex flex-col items-center py-2 rounded-lg hover:bg-amber-50 transition-colors">
                 <i class="fas fa-clipboard-check text-lg mb-1"></i><span class="text-[10px] font-bold">盤點</span>
@@ -1122,13 +1115,6 @@ async function saveThreshold(id, name) {
 /* superseded updateRoleUi removed in Commercial v4 cleanup */
 
 
-function openManualAction(type) {
-    switchTab('manual');
-    const typeEl = document.getElementById('manualType');
-    if (typeEl) typeEl.value = type;
-    toggleManualMode();
-    setTimeout(() => document.getElementById('manualId')?.focus(), 60);
-}
 /* superseded applyDashboardMetricFilter removed in Commercial v4 cleanup */
 
 
@@ -1206,7 +1192,7 @@ async function toggleStocktakeScanner() {
 /* superseded createAdminUser removed in Commercial v4 cleanup */
 
 async function toggleAdminUser(userId,active){if(!confirm(`確定${active?'啟用':'停用'}此帳號？`))return;try{await postApi({action:'setUserActive',userId,isActive:active});loadAdminUsers()}catch(e){showAlert(e.message)}}
-async function resetAdminPassword(userId,account){const password=prompt(`請輸入 ${account} 的新密碼（至少 8 碼）`);if(!password)return;if(password.length<8){showAlert('密碼至少 8 碼');return;}try{const credential=await createPasswordCredential(password);await postApi({action:'resetUserPassword',userId,...credential});showToast('✅ 密碼已重設','success')}catch(e){showAlert(e.message)}}
+async function resetAdminPassword(userId,account){const password=prompt(`請輸入 ${account} 的新密碼（字數不限，不可空白）`);if(password===null)return;if(password.length===0){showAlert('密碼不可空白');return;}try{const credential=await createPasswordCredential(password);await postApi({action:'resetUserPassword',userId,...credential});showToast('✅ 密碼已重設','success')}catch(e){showAlert(e.message)}}
 /* superseded switchTab removed in Commercial v4 cleanup */
 
 
@@ -1263,12 +1249,13 @@ function rebuildItemIndexes(){
 function scopedInventoryItems(){return selectedDashboardLocationId?allItems.filter(i=>Number(i.location_id)===Number(selectedDashboardLocationId)):allItems;}
 function getSelectedLocationId(id){const el=document.getElementById(id);return Number(el?.value||0);}
 function activeLocationsOnly(){return (allLocations||[]).filter(x=>Number(x.is_active)!==0);}
-function locationOptionsHtml(includeAll=false){return `${includeAll?'<option value="0">全部儲位</option>':''}${activeLocationsOnly().map(l=>`<option value="${l.location_id}">${escapeHtmlClient(l.name)}${l.code?` (${escapeHtmlClient(l.code)})`:''}</option>`).join('')}`;}
+function locationOptionsHtml(includeAll=false){return `${includeAll?'<option value="0">全部庫位</option>':''}${activeLocationsOnly().map(l=>`<option value="${l.location_id}">${escapeHtmlClient(l.name)}${l.code?` (${escapeHtmlClient(l.code)})`:''}</option>`).join('')}`;}
 function populateLocationSelectors(){
     const ids=[['dashboardLocationFilter',true],['scanLocation',false],['manualLocation',false],['stocktakeLocation',false]];
     for(const [id,all] of ids){const el=document.getElementById(id);if(!el)continue;const prev=el.value;el.innerHTML=locationOptionsHtml(all);if(prev&&[...el.options].some(o=>o.value===prev))el.value=prev;else if(all)el.value=String(selectedDashboardLocationId||0);}
-    const dashboard=document.getElementById('dashboardLocationFilter');if(dashboard)dashboard.value=String(selectedDashboardLocationId||0);
+    const dashboard=document.getElementById('dashboardLocationFilter');if(dashboard)dashboard.value=String(selectedDashboardLocationId||0);updateDashboardLocationHint();
 }
+function updateDashboardLocationHint(){const hint=document.getElementById('dashboardLocationHint');if(!hint)return;const location=activeLocationsOnly().find(x=>Number(x.location_id)===Number(selectedDashboardLocationId)),label=location?location.name:'全部庫位',count=new Set(scopedInventoryItems().map(x=>x.id)).size;hint.textContent=`目前顯示：${label}｜${count} 個品項`;}
 function setDashboardLocationFilter(){selectedDashboardLocationId=getSelectedLocationId('dashboardLocationFilter');filterItems();updateDashboard();loadAnomalyCenter();loadAnalyticsSummary();}
 function refreshScannerLocationContext(){if(scanMode==='outbound'&&scannedData)populateBatchSelect(scannedData,'scanBatchSelect','outbound');}
 function refreshManualLocationContext(){autoFillManual();}
@@ -1319,7 +1306,7 @@ function handleLogout(){
 function updateDashboard(){
     const items=scopedInventoryItems(),today=taipeiYmd(),weekAgo=taipeiYmd(new Date(Date.now()-7*86400000)),totals=new Map();let todayCount=0,pendingCount=0;
     items.forEach(i=>{if(i.last_stocktake&&i.last_stocktake.slice(0,10)>=today)todayCount++;else if(!i.last_stocktake||i.last_stocktake.slice(0,10)<weekAgo)pendingCount++;if(!totals.has(i.id))totals.set(i.id,{qty:0,min:i.min_qty});const t=totals.get(i.id);t.qty+=Number(i.qty)||0;t.min=Number(i.min_qty)||0;});
-    let low=0;totals.forEach(t=>{if(t.qty<=t.min)low++});document.getElementById('totalItems').textContent=totals.size;document.getElementById('todayCount').textContent=todayCount;document.getElementById('pendingCount').textContent=pendingCount;document.getElementById('lowStockCount').textContent=low;
+    let low=0;totals.forEach(t=>{if(t.qty<=t.min)low++});document.getElementById('totalItems').textContent=totals.size;document.getElementById('todayCount').textContent=todayCount;document.getElementById('pendingCount').textContent=pendingCount;document.getElementById('lowStockCount').textContent=low;updateDashboardLocationHint();
 }
 /* superseded filterItems removed in Commercial v4 cleanup */
 
@@ -1383,8 +1370,8 @@ async function loadAuditCenter(){if(!canManageInventoryUi()){showAlert('權限�
 async function resolveVarianceV4(id){const note=prompt('請輸入差異結案說明：')||'';if(!note)return;try{await postApi({action:'resolveAdjustment',adjustmentId:id,resolutionNote:note});showToast('✅ 差異已結案','success');loadAuditCenter();loadAnomalyCenter();}catch(e){showAlert(e.message)}}
 
 async function loadAdminUsers(){if(!canSystemAdminUi()){showAlert('僅系統管理員可管理帳號');return;}try{const r=await getApiResource('users');renderAdminUsers(r.users||[])}catch(e){showAlert(e.message)}}
-function renderAdminUsers(users){const box=document.getElementById('adminContent'),roles=[['viewer','唯讀'],['operator','一般操作員'],['inventory_manager','庫存管理員'],['system_admin','系統管理員']];box.innerHTML=`<section class="v4-panel"><div class="v4-panel-title">新增使用者</div><div class="user-create"><input id="newUserAccount" placeholder="帳號"><input id="newUserName" placeholder="姓名"><input id="newUserPassword" type="password" placeholder="密碼至少 8 碼"><select id="newUserRole">${roles.map(r=>`<option value="${r[0]}">${r[1]}</option>`).join('')}</select><button onclick="createAdminUser()" class="v4-primary-btn">新增</button></div></section>${users.map(u=>`<div class="user-row"><div><b>${escapeHtmlClient(u.display_name||u.account)}</b><small>${escapeHtmlClient(u.account)}｜${escapeHtmlClient(u.role_label||u.access_role)}</small></div><select id="role-${u.id}" onchange="changeUserRoleV4(${u.id})">${roles.map(r=>`<option value="${r[0]}" ${u.access_role===r[0]?'selected':''}>${r[1]}</option>`).join('')}</select><button onclick="resetAdminPassword(${u.id},decodeURIComponent('${encodeURIComponent(u.account)}'))" class="mini-btn">密碼</button><button onclick="toggleAdminUser(${u.id},${Number(u.is_active)!==1})" class="mini-btn ${Number(u.is_active)===1?'danger':'success'}">${Number(u.is_active)===1?'停用':'啟用'}</button></div>`).join('')}`;}
-async function createAdminUser(){const account=document.getElementById('newUserAccount').value.trim(),displayName=document.getElementById('newUserName').value.trim(),password=document.getElementById('newUserPassword').value,accessRole=document.getElementById('newUserRole').value;if(!account||password.length<8){showAlert('帳號不可空白，密碼至少 8 碼');return;}try{const credential=await createPasswordCredential(password);await postApi({action:'createUser',account,displayName,accessRole,...credential});showToast('✅ 使用者已新增','success');loadAdminUsers();}catch(e){showAlert(e.message)}}
+function renderAdminUsers(users){const box=document.getElementById('adminContent'),roles=[['viewer','唯讀'],['operator','一般操作員'],['inventory_manager','庫存管理員'],['system_admin','系統管理員']];box.innerHTML=`<section class="v4-panel"><div class="v4-panel-title"><span>新增使用者</span><small>密碼字數不限，但不可空白。</small></div><div class="user-create"><input id="newUserAccount" placeholder="帳號"><input id="newUserName" placeholder="姓名"><input id="newUserPassword" type="password" placeholder="密碼（字數不限）"><select id="newUserRole">${roles.map(r=>`<option value="${r[0]}">${r[1]}</option>`).join('')}</select><button onclick="createAdminUser()" class="v4-primary-btn">新增</button></div></section>${users.map(u=>`<div class="user-row"><div><b>${escapeHtmlClient(u.display_name||u.account)}</b><small>${escapeHtmlClient(u.account)}｜${escapeHtmlClient(u.role_label||u.access_role)}</small></div><select id="role-${u.id}" onchange="changeUserRoleV4(${u.id})">${roles.map(r=>`<option value="${r[0]}" ${u.access_role===r[0]?'selected':''}>${r[1]}</option>`).join('')}</select><button onclick="resetAdminPassword(${u.id},decodeURIComponent('${encodeURIComponent(u.account)}'))" class="mini-btn">密碼</button><button onclick="toggleAdminUser(${u.id},${Number(u.is_active)!==1})" class="mini-btn ${Number(u.is_active)===1?'danger':'success'}">${Number(u.is_active)===1?'停用':'啟用'}</button></div>`).join('')}`;}
+async function createAdminUser(){const account=document.getElementById('newUserAccount').value.trim(),displayName=document.getElementById('newUserName').value.trim(),password=document.getElementById('newUserPassword').value,accessRole=document.getElementById('newUserRole').value;if(!account||password.length===0){showAlert('帳號與密碼不可空白');return;}try{const credential=await createPasswordCredential(password);await postApi({action:'createUser',account,displayName,accessRole,...credential});showToast('✅ 使用者已新增','success');loadAdminUsers();}catch(e){showAlert(e.message)}}
 async function changeUserRoleV4(id){const accessRole=document.getElementById(`role-${id}`).value;if(!confirm('變更角色後該使用者現有登入會失效，確定繼續？')){loadAdminUsers();return;}try{await postApi({action:'setUserRole',userId:id,accessRole});showToast('✅ 權限已更新','success');loadAdminUsers();}catch(e){showAlert(e.message);loadAdminUsers();}}
 
 async function loadSystemCenter(){if(!canSystemAdminUi()){showAlert('僅系統管理員可查看');return;}const box=document.getElementById('adminContent');box.innerHTML='<div class="v4-muted">讀取系統狀態…</div>';try{const [logs,bak]=await Promise.all([getApiResource('systemLogs',{limit:100}),getApiResource('backupStatus')]);box.innerHTML=`<section class="v4-panel"><div class="v4-panel-title">備份與還原</div><div class="backup-card"><b>${escapeHtmlClient(bak.policy)}</b><p>${escapeHtmlClient(bak.note)}</p><p>目前設定保留：${bak.retentionDays} 天</p><small>每日健康檢查點：${(bak.checkpoints||[]).length} 筆。正式還原請依專案 BACKUP_RESTORE.md 使用 Wrangler Time Travel。</small></div></section><section class="v4-panel"><div class="v4-panel-title">系統錯誤紀錄</div><div class="audit-list">${(logs.systemLogs||[]).map(x=>`<div class="audit-row ${escapeHtmlClient(x.severity)}"><div><b>${escapeHtmlClient(x.event_type)}</b><small>${escapeHtmlClient(x.created_at)}｜${escapeHtmlClient(x.severity)}｜${escapeHtmlClient(x.user_name||'系統')}</small><small>${escapeHtmlClient(x.message)}</small></div></div>`).join('')||'<div class="v4-muted">目前無系統錯誤紀錄</div>'}</div></section><button onclick="installPwa()" class="v4-primary-btn"><i class="fas fa-mobile-alt mr-1"></i>安裝 PWA 到此裝置</button>`;}catch(e){showAlert(e.message)}}
