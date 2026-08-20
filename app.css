@@ -1753,6 +1753,7 @@ body.modal-page-locked { overflow: hidden; }
 .status-warning { background:#fef3c7; color:#92400e; }
 .status-danger { background:#fee2e2; color:#991b1b; }
 .batch-note { color:#475569; background:#f8fafc; border-left:3px solid #94a3b8; border-radius:.35rem; padding:.3rem .4rem; font-size:.64rem; line-height:1.35; overflow-wrap:anywhere; }
+.batch-note strong { color:#334155; }
 .stocktake-kpi { background:#f8fafc; border:1px solid #e2e8f0; border-radius:.75rem; padding:.6rem; text-align:center; }
 .stocktake-kpi span { display:block; color:#64748b; font-size:.62rem; font-weight:700; }
 .stocktake-kpi b { display:block; margin-top:.18rem; font-size:1rem; }
