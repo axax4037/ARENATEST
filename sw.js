@@ -1,4 +1,4 @@
-const CACHE_NAME = 'arenastone-static-v20260820-commercial-v4-13';
+const CACHE_NAME = 'arenastone-static-v20260820-commercial-v4-14';
 const CORE_ASSETS = [
   './',
   './index.html',
