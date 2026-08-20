@@ -50,7 +50,7 @@
                 <span id="networkStatus" class="network-badge network-online" title="網路與同步狀態"><i class="fas fa-wifi"></i><span class="network-label">線上</span></span>
                 <span id="loading-tag" class="text-blue-500 text-xs hidden animate-pulse font-bold bg-blue-50 px-2 py-1 rounded"><i class="fas fa-sync-alt fa-spin mr-1"></i>讀取中</span>
                 <button id="pwaInstallBtn" onclick="installPwa()" class="hidden text-slate-600 hover:text-blue-600 p-1.5 rounded-lg border border-slate-200 bg-slate-50" title="安裝到裝置"><i class="fas fa-download"></i></button>
-                <button id="adminHeaderBtn" onclick="switchTab('admin')" class="hidden text-slate-600 hover:text-blue-600 p-1.5 rounded-lg border border-slate-200 bg-slate-50" title="管理中心"><i class="fas fa-user-shield"></i></button>
+                <button id="adminHeaderBtn" onclick="switchTab('admin')" class="admin-header-btn hidden text-slate-600 hover:text-blue-600 rounded-lg border border-slate-200 bg-slate-50" title="開啟管理中心"><i class="fas fa-user-shield"></i><span>管理中心</span></button>
                 <button onclick="handleLogout()" class="text-sm text-red-500 font-bold ml-1 active:scale-90 transition-transform p-1"><i class="fas fa-sign-out-alt text-lg"></i></button>
             </div>
         </div>
@@ -242,7 +242,7 @@
             <div class="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-100">
                 <div class="flex items-center justify-between gap-2 mb-4"><h2 class="text-lg font-bold text-slate-800"><i class="fas fa-user-shield text-blue-600 mr-2"></i>管理中心</h2><span id="adminRoleBadge" class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded"></span></div>
                 <div class="admin-tabs-scroll mb-4">
-                    <button onclick="renderAdminInventory()" class="admin-subtab"><i class="fas fa-boxes mr-1"></i>品項/批次</button>
+                    <button onclick="renderAdminInventory()" class="admin-subtab"><i class="fas fa-boxes mr-1"></i>品項／安全庫存</button>
                     <button onclick="renderMovementCenter()" class="admin-subtab"><i class="fas fa-exchange-alt mr-1"></i>異動單</button>
                     <button onclick="loadLocationManager()" class="admin-subtab"><i class="fas fa-warehouse mr-1"></i>庫位管理</button>
                     <button onclick="loadAuditCenter()" class="admin-subtab"><i class="fas fa-history mr-1"></i>稽核</button>
@@ -253,23 +253,7 @@
             </div>
         </div>
 
-        <!-- ======================= 4. 新增：安全門檻管理 ======================= -->
-        <div id="thresholdView" class="hidden space-y-4">
-            <div class="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-100">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-lg font-bold text-slate-800 flex items-center"><i class="fas fa-sliders-h mr-2 text-teal-600"></i>安全庫存門檻設定</h2>
-                </div>
-                <p class="text-xs text-slate-500 mb-4 bg-teal-50 p-3 rounded-lg border border-teal-100"><i class="fas fa-info-circle text-teal-500 mr-1"></i> 修改安全庫存門檻後，低於此數量的品項將在首頁顯示紅色預警。</p>
-                
-                <div class="relative mb-4">
-                    <input type="text" id="thresholdSearchInput" placeholder="搜尋需修改的品項或ID..." class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-gray-50 text-sm" oninput="debouncedRenderThresholds()">
-                    <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-sm"></i>
-                </div>
-                <div id="thresholdList" class="space-y-3"></div>
-            </div>
-        </div>
-
-        <!-- ======================= 5. 報表預警 ======================= -->
+        <!-- ======================= 報表預警 ======================= -->
         <div id="reportView" class="hidden space-y-4">
              <div class="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-100">
                 <h2 class="text-lg font-bold mb-1 text-slate-800 flex items-center"><i class="fas fa-chart-pie mr-2 text-rose-500"></i>庫存趨勢、補貨與預警報表</h2>
@@ -307,7 +291,7 @@
 
     <!-- 統一作業入口：快速作業已整合至底部導航列 -->
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 pb-safe">
-        <div class="max-w-6xl mx-auto grid grid-cols-6 py-1.5 px-1">
+        <div class="max-w-6xl mx-auto grid grid-cols-5 py-1.5 px-1">
             <button onclick="switchTab('dashboard', this)" class="nav-item active flex flex-col items-center py-2 rounded-lg hover:bg-blue-50 transition-colors">
                 <i class="fas fa-home text-lg mb-1"></i><span class="text-[10px] font-bold">總覽</span>
             </button>
@@ -319,9 +303,6 @@
             </button>
             <button onclick="switchTab('stocktake', this)" class="nav-item flex flex-col items-center py-2 rounded-lg hover:bg-amber-50 transition-colors">
                 <i class="fas fa-clipboard-check text-lg mb-1"></i><span class="text-[10px] font-bold">盤點</span>
-            </button>
-            <button onclick="switchTab('threshold', this)" class="nav-item flex flex-col items-center py-2 rounded-lg hover:bg-blue-50 transition-colors">
-                <i class="fas fa-sliders-h text-lg mb-1"></i><span class="text-[10px] font-bold">門檻</span>
             </button>
             <button onclick="switchTab('report', this)" class="nav-item flex flex-col items-center py-2 rounded-lg hover:bg-blue-50 transition-colors">
                 <i class="fas fa-chart-line text-lg mb-1"></i><span class="text-[10px] font-bold">報表</span>
@@ -366,7 +347,6 @@
         let qrLibraryPromise = null;
         let syncStateHideTimer = null;
         let filterDebounceTimer = null;
-        let thresholdDebounceTimer = null;
         let offlineToastShown = false;
 
         // API 韌性設定：iOS/Safari 偶發 TypeError: Load failed 時採有限重試。
@@ -447,11 +427,6 @@ function registerServiceWorker() {
 function debouncedFilterItems() {
     clearTimeout(filterDebounceTimer);
     filterDebounceTimer = setTimeout(filterItems, 180);
-}
-
-function debouncedRenderThresholds() {
-    clearTimeout(thresholdDebounceTimer);
-    thresholdDebounceTimer = setTimeout(renderThresholds, 180);
 }
 
 async function ensureLiveInventoryReady() {
@@ -1049,65 +1024,6 @@ async function startScanner() {
             } catch(err) { showAlert("設定失敗：" + err.message); } finally { btn.disabled = false; btn.innerHTML = originalText; }
         }
 
-        // ==========================================
-        // 門檻與頁籤切換
-        // ==========================================
-        function renderThresholds() {
-            const container = document.getElementById('thresholdList');
-            const keyword = (document.getElementById('thresholdSearchInput')?.value || '').toLowerCase();
-            const uniqueItems = new Map();
-            allItems.forEach(i => {
-                if (!uniqueItems.has(i.id)) {
-                    if (!keyword || i.name.toLowerCase().includes(keyword) || i.id.toLowerCase().includes(keyword)) {
-                        uniqueItems.set(i.id, { name: i.name, minQty: i.min_qty });
-                    }
-                }
-            });
-            if (uniqueItems.size === 0) { container.innerHTML = '<div class="text-center text-gray-400 py-6 font-bold">查無符合品項</div>'; return; }
-            let html = '';
-            uniqueItems.forEach((v, id) => {
-                html += `
-                    <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-200 flex justify-between items-center gap-3">
-                        <div class="flex-1 min-w-0"><h3 class="font-bold text-slate-800 text-sm truncate">${v.name}</h3><p class="text-[10px] text-gray-500 font-mono mt-0.5">ID: ${id}</p></div>
-                        <div class="flex items-center gap-2 shrink-0 bg-slate-50 p-1.5 rounded-lg border border-slate-100">
-                            <div class="text-[10px] text-slate-400 font-bold mr-1">門檻</div>
-                            <input type="number" id="th-input-${id}" value="${v.minQty}" min="0" class="w-14 h-8 border border-gray-300 rounded text-center font-mono font-bold text-sm outline-none focus:border-teal-500 bg-white">
-                            <button onclick="saveThreshold('${id}', '${v.name}')" id="th-btn-${id}" class="bg-teal-600 active:scale-95 text-white w-8 h-8 rounded flex items-center justify-center shadow-sm"><i class="fas fa-save"></i></button>
-                        </div>
-                    </div>`;
-            });
-            container.innerHTML = html;
-        }
-async function saveThreshold(id, name) {
-    const inputEl = document.getElementById(`th-input-${id}`);
-    const newQty = parseInt(inputEl?.value);
-    if (isNaN(newQty) || newQty < 0) { showToast("無效數量", "error"); return; }
-    if (!CURRENT_USER_NAME) { showAlert("請登入！"); return; }
-
-    // 先保留使用者輸入，再確認即時同步；同步期間即使重畫門檻清單也不會遺失新值。
-    if (!(await ensureLiveInventoryReady())) return;
-    if (!confirm(`確定將 [${name}] 的安全門檻修改為 ${newQty} 嗎？`)) return;
-
-    const btnEl = document.getElementById(`th-btn-${id}`);
-    if (!btnEl) return;
-    btnEl.disabled = true;
-    btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-
-    try {
-        const res = await postApi({ action: 'updateThreshold', id, minQty: newQty });
-        applyMutationResponse(res);
-        showToast(`✅ 更新成功！`, "success");
-        scheduleBackgroundSync();
-    } catch(err) {
-        showAlert("更新失敗：" + err.message);
-    } finally {
-        const freshBtn = document.getElementById(`th-btn-${id}`);
-        if (freshBtn) {
-            freshBtn.disabled = false;
-            freshBtn.innerHTML = '<i class="fas fa-save"></i>';
-        }
-    }
-}
 /* superseded updateRoleUi removed in Commercial v4 cleanup */
 
 
@@ -1206,8 +1122,8 @@ var selectedDashboardLocationId = 0;
 var currentAnalytics = null;
 var currentAnomalies = null;
 var pwaInstallPrompt = null;
-var barcodeLibraryPromise = null;
-const BARCODE_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';
+var qrCodeLibraryPromise = null;
+const QR_CODE_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js';
 
 function roleLevelV4(role){ return ({viewer:0,operator:1,inventory_manager:2,system_admin:3})[String(role||'')] ?? (role==='admin'?3:1); }
 function capabilityFallback(role){
@@ -1262,12 +1178,11 @@ function applyInventoryData(data,silentMode=false,options={}){
     if(data.capabilities)applyCapabilities(data.capabilities);
     populateLocationSelectors(); rebuildItemIndexes(); updateDashboard(); updateCategoryFilter(); updateManualIdList();
     if(!document.getElementById('dashboardView').classList.contains('hidden'))filterItems();
-    if(!document.getElementById('thresholdView').classList.contains('hidden'))renderThresholds();
     if(!document.getElementById('reportView').classList.contains('hidden'))generateReport();
     if(options.persistCache!==false)saveInventoryCache();
     if(hasLiveInventory||silentMode)loadAnomalyCenter();
 }
-function refreshCurrentViews(){rebuildItemIndexes();updateDashboard();updateCategoryFilter();updateManualIdList();populateLocationSelectors();if(!document.getElementById('dashboardView').classList.contains('hidden'))filterItems();if(!document.getElementById('thresholdView').classList.contains('hidden'))renderThresholds();if(!document.getElementById('reportView').classList.contains('hidden'))generateReport();scheduleInventoryCacheSave();}
+function refreshCurrentViews(){rebuildItemIndexes();updateDashboard();updateCategoryFilter();updateManualIdList();populateLocationSelectors();if(!document.getElementById('dashboardView').classList.contains('hidden'))filterItems();if(!document.getElementById('reportView').classList.contains('hidden'))generateReport();scheduleInventoryCacheSave();}
 
 function updateNetworkBadge(state){
     const el=document.getElementById('networkStatus');if(!el)return;
@@ -1371,8 +1286,8 @@ async function changeUserRoleV4(id){const accessRole=document.getElementById(`ro
 
 async function loadSystemCenter(){if(!canSystemAdminUi()){showAlert('僅系統管理員可查看');return;}const box=document.getElementById('adminContent');box.innerHTML='<div class="v4-muted">讀取系統狀態…</div>';try{const [logs,bak]=await Promise.all([getApiResource('systemLogs',{limit:100}),getApiResource('backupStatus')]);box.innerHTML=`<section class="v4-panel"><div class="v4-panel-title">備份與還原</div><div class="backup-card"><b>${escapeHtmlClient(bak.policy)}</b><p>${escapeHtmlClient(bak.note)}</p><p>目前設定保留：${bak.retentionDays} 天</p><small>每日健康檢查點：${(bak.checkpoints||[]).length} 筆。正式還原請依專案 BACKUP_RESTORE.md 使用 Wrangler Time Travel。</small></div></section><section class="v4-panel"><div class="v4-panel-title">系統錯誤紀錄</div><div class="audit-list">${(logs.systemLogs||[]).map(x=>`<div class="audit-row ${escapeHtmlClient(x.severity)}"><div><b>${escapeHtmlClient(x.event_type)}</b><small>${escapeHtmlClient(x.created_at)}｜${escapeHtmlClient(x.severity)}｜${escapeHtmlClient(x.user_name||'系統')}</small><small>${escapeHtmlClient(x.message)}</small></div></div>`).join('')||'<div class="v4-muted">目前無系統錯誤紀錄</div>'}</div></section><button onclick="installPwa()" class="v4-primary-btn"><i class="fas fa-mobile-alt mr-1"></i>安裝 PWA 到此裝置</button>`;}catch(e){showAlert(e.message)}}
 
-async function ensureBarcodeLibraryLoaded(){if(window.JsBarcode)return true;if(barcodeLibraryPromise)return barcodeLibraryPromise;barcodeLibraryPromise=new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=BARCODE_SCRIPT_URL;s.async=true;s.onload=()=>resolve(true);s.onerror=()=>{barcodeLibraryPromise=null;reject(new Error('條碼列印元件載入失敗'))};document.head.appendChild(s)});return barcodeLibraryPromise;}
-async function printInventoryLabel(batchId,locationId){const item=allItems.find(x=>Number(x.batch_id)===Number(batchId)&&Number(x.location_id)===Number(locationId));if(!item){showAlert('找不到標籤資料');return;}try{await ensureBarcodeLibraryLoaded();const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');JsBarcode(svg,item.id,{format:'CODE128',displayValue:true,height:45,margin:4,fontSize:12});const w=window.open('','_blank','width=520,height=600');if(!w)throw new Error('瀏覽器封鎖列印視窗，請允許彈出視窗');w.document.write(`<!doctype html><html><head><title>庫存標籤</title><style>body{font-family:Arial,'Noto Sans TC',sans-serif;padding:16px}.label{width:82mm;border:1px solid #111;padding:10px}.name{font-size:18px;font-weight:800}.meta{font-size:12px;margin-top:5px}.note{font-size:11px;margin-top:5px;white-space:pre-wrap}@media print{button{display:none}.label{border:1px solid #111}}</style></head><body><div class="label"><div class="name">${escapeHtmlClient(item.name)}</div><div class="meta">ID ${escapeHtmlClient(item.id)}｜${escapeHtmlClient(item.location_name)}</div><div class="meta">LOT ${escapeHtmlClient(item.lot||'無')}｜EXP ${escapeHtmlClient(formatToYYYYMMDD(item.expiry))}</div>${svg.outerHTML}${item.note?`<div class="note">備註：${escapeHtmlClient(item.note)}</div>`:''}</div><button onclick="window.print()">列印</button></body></html>`);w.document.close();}catch(e){showAlert(e.message)}}
+async function ensureQrCodeLibraryLoaded(){if(window.qrcode)return true;if(qrCodeLibraryPromise)return qrCodeLibraryPromise;qrCodeLibraryPromise=new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=QR_CODE_SCRIPT_URL;s.async=true;s.onload=()=>resolve(true);s.onerror=()=>{qrCodeLibraryPromise=null;reject(new Error('QR Code 列印元件載入失敗'))};document.head.appendChild(s)});return qrCodeLibraryPromise;}
+async function printInventoryLabel(batchId,locationId){const item=allItems.find(x=>Number(x.batch_id)===Number(batchId)&&Number(x.location_id)===Number(locationId));if(!item){showAlert('找不到標籤資料');return;}const w=window.open('','_blank','width=520,height=600');if(!w){showAlert('瀏覽器封鎖列印視窗，請允許彈出視窗');return;}try{await ensureQrCodeLibraryLoaded();const qr=window.qrcode(0,'M');qr.addData(String(item.id));qr.make();const qrSvg=qr.createSvgTag({cellSize:5,margin:10,scalable:true});w.document.write(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>庫存 QR Code 標籤</title><style>*{box-sizing:border-box}html,body{margin:0;min-width:0}body{font-family:Arial,'Noto Sans TC',sans-serif;padding:12px;background:#f8fafc;color:#111}.label{width:100%;max-width:82mm;margin:0 auto;border:1px solid #111;padding:3mm;overflow:hidden;background:#fff}.name{font-size:18px;line-height:1.3;font-weight:800;overflow-wrap:anywhere}.meta{font-size:12px;line-height:1.45;margin-top:5px;overflow-wrap:anywhere;word-break:break-word}.qr{display:flex;justify-content:center;margin:3mm 0 1.5mm}.qr svg{display:block;width:34mm;height:34mm;max-width:100%}.qr-value{font:700 12px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;text-align:center;overflow-wrap:anywhere}.note{font-size:11px;line-height:1.4;margin-top:5px;white-space:pre-wrap;overflow-wrap:anywhere}.actions{width:100%;max-width:82mm;margin:10px auto 0}.actions button{width:100%;padding:10px;border:0;border-radius:8px;background:#1d4ed8;color:#fff;font-weight:700}@page{margin:3mm}@media print{body{padding:0;background:#fff}.actions{display:none}.label{max-width:82mm;margin:0;break-inside:avoid;page-break-inside:avoid}.qr svg{width:30mm;height:30mm}}</style></head><body><div class="label"><div class="name">${escapeHtmlClient(item.name)}</div><div class="meta">ID ${escapeHtmlClient(item.id)}｜${escapeHtmlClient(item.location_name)}</div><div class="meta">LOT ${escapeHtmlClient(item.lot||'無')}｜EXP ${escapeHtmlClient(formatToYYYYMMDD(item.expiry))}</div><div class="qr">${qrSvg}</div><div class="qr-value">${escapeHtmlClient(item.id)}</div>${item.note?`<div class="note">備註：${escapeHtmlClient(item.note)}</div>`:''}</div><div class="actions"><button onclick="window.print()">列印標籤</button></div></body></html>`);w.document.close();}catch(e){w.close();showAlert(e.message)}}
 
 window.addEventListener('appinstalled',()=>{pwaInstallPrompt=null;document.getElementById('pwaInstallBtn')?.classList.add('hidden');showToast('✅ Arenastone 已安裝到裝置','success');});
 async function installPwa(){showAlert('Chrome 會在符合安裝條件時顯示原生安裝提示；也可使用瀏覽器選單「安裝應用程式」。iPhone/iPad 請使用 Safari「分享 → 加入主畫面」。');}
@@ -1386,7 +1301,6 @@ function updateRoleUi(){
     const auto=document.getElementById('btnAutoSchedule'),manualReport=document.getElementById('btnManualReport');for(const b of [auto,manualReport])if(b){b.disabled=!canManageInventoryUi();b.classList.toggle('opacity-50',!canManageInventoryUi());}
     document.getElementById('scanPriceContainer')?.classList.toggle('hidden',scanMode!=='inbound'||!canViewCostUi());document.getElementById('manualPriceContainer')?.classList.toggle('hidden',document.getElementById('manualType')?.value!=='入庫'||!canViewCostUi());
     const badge=document.getElementById('adminRoleBadge');if(badge)badge.textContent=CURRENT_CAPABILITIES.roleLabel||CURRENT_USER_ROLE;
-    document.querySelectorAll('.nav-item').forEach(b=>{const oc=b.getAttribute('onclick')||'';if(oc.includes("'threshold'")&&!canManageInventoryUi())b.classList.add('v4-role-disabled');else b.classList.remove('v4-role-disabled');});
 }
 function filterItems(){
     const search=(document.getElementById('searchInput')?.value||'').toLowerCase().trim(),category=document.getElementById('categoryFilter')?.value||'',status=document.getElementById('statusFilter')?.value||'',lowOnly=!!document.getElementById('lowStockOnly')?.checked,today=taipeiYmd(),weekAgo=taipeiYmd(new Date(Date.now()-7*86400000)),scope=scopedInventoryItems(),totals=new Map();scope.forEach(i=>totals.set(i.id,(totals.get(i.id)||0)+Number(i.qty||0)));
@@ -1402,7 +1316,7 @@ async function renderAdminInventory(){
       return `<section class="admin-item-v4 ${Number(m.is_active)!==1?'inactive':''}"><div class="admin-item-title"><b>${escapeHtmlClient(m.name||id)}</b><span>${escapeHtmlClient(id)}</span><button onclick="toggleItemActiveV4(decodeURIComponent('${k}'),${Number(m.is_active)!==1})" class="mini-btn ${Number(m.is_active)===1?'danger':'success'}">${Number(m.is_active)===1?'停用':'啟用'}</button></div><div class="admin-fields"><label>品名<input id="adm-name-${k}" value="${escapeHtmlClient(m.name||id)}"></label><label>分類<input id="adm-cat-${k}" value="${escapeHtmlClient(m.category||'')}"></label><label title="目前總量小於或等於此數量時顯示低庫存警示">安全庫存（警示線）<input id="adm-min-${k}" type="number" min="0" value="${Number(m.min_qty||0)}"></label><label title="補貨後希望恢復到的數量；0 代表由系統自動估算">目標庫存（補貨後）<input id="adm-target-${k}" type="number" min="0" value="${Number(m.target_qty||0)}"></label><label>效期預警天數<input id="adm-warning-${k}" type="number" min="0" max="3650" value="${Number(m.warning_days||30)}"></label><label>採購前置天數<input id="adm-lead-${k}" type="number" min="0" max="3650" value="${Number(m.lead_time_days||7)}"></label>${priceField}</div><button onclick="saveAdminItem(decodeURIComponent('${k}'))" class="v4-primary-btn">儲存品項主檔</button><div class="admin-batches">${[...batchMap.values()].map(r=>`<div class="admin-batch-row"><div class="batch-location-summary">${r.locations.map(l=>`<span class="location-chip">${escapeHtmlClient(l.location_name)} ${l.qty}</span>`).join('')}</div><input id="adm-lot-${r.batch_id}" value="${escapeHtmlClient(r.lot)}" placeholder="LOT"><input id="adm-exp-${r.batch_id}" type="date" value="${escapeHtmlClient(r.expiry)}"><input id="adm-note-${r.batch_id}" value="${escapeHtmlClient(r.batch_note||'')}" placeholder="批次備註"><span class="qty-readonly">總量 ${r.locations.reduce((s,x)=>s+Number(x.qty||0),0)}</span><button onclick="saveAdminBatch(${r.batch_id})" class="mini-btn primary">批次資料</button><button onclick="printInventoryLabel(${r.batch_id},${r.locations[0]?.location_id||0})" class="mini-btn"><i class="fas fa-print"></i></button></div>`).join('')||'<div class="v4-muted">尚無批次</div>'}</div></section>`;}).join('')||'<div class="v4-empty">尚無品項</div>');
     }catch(e){box.innerHTML=`<div class="v4-error">${escapeHtmlClient(e.message)}</div>`;}
 }
-async function switchTab(tab,sourceBtn=null){if(tab==='admin'&&!canManageInventoryUi()){showAlert('權限不足');return;}if(tab==='threshold'&&!canManageInventoryUi()){showAlert('安全庫存與採購策略僅限庫存管理員以上權限');return;}if(['scanner','manual','stocktake'].includes(tab)&&!canOperateUi()){showAlert('目前帳號為唯讀，不能執行庫存作業');return;}if(homeQrCode){try{await toggleHomeScanner()}catch{}}if(html5QrCode){try{if(html5QrCode.isScanning)await html5QrCode.stop()}catch{}try{html5QrCode.clear()}catch{}html5QrCode=null;document.getElementById('scannerPlaceholder')?.classList.remove('hidden');document.getElementById('scanForm')?.classList.add('hidden');}if(tab!=='stocktake'&&stocktakeQrActive)try{await toggleStocktakeScanner()}catch{}document.querySelectorAll('#mainContent > div').forEach(d=>d.classList.add('hidden'));const view=document.getElementById(tab+'View');if(!view)return;view.classList.remove('hidden');document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active','text-blue-600','bg-blue-50'));if(sourceBtn)sourceBtn.classList.add('active','text-blue-600','bg-blue-50');if(tab==='dashboard'){filterItems();loadAnomalyCenter();}if(tab==='manual'){populateLocationSelectors();toggleManualMode();}if(tab==='scanner'){populateLocationSelectors();setScanMode(scanMode);}if(tab==='report')generateReport();if(tab==='threshold')renderThresholds();if(tab==='stocktake'){populateLocationSelectors();await refreshStocktakeWorkflow();}if(tab==='admin')await renderAdminInventory();window.scrollTo(0,0);}
+async function switchTab(tab,sourceBtn=null){if(tab==='admin'&&!canManageInventoryUi()){showAlert('權限不足');return;}if(['scanner','manual','stocktake'].includes(tab)&&!canOperateUi()){showAlert('目前帳號為唯讀，不能執行庫存作業');return;}if(homeQrCode){try{await toggleHomeScanner()}catch{}}if(html5QrCode){try{if(html5QrCode.isScanning)await html5QrCode.stop()}catch{}try{html5QrCode.clear()}catch{}html5QrCode=null;document.getElementById('scannerPlaceholder')?.classList.remove('hidden');document.getElementById('scanForm')?.classList.add('hidden');}if(tab!=='stocktake'&&stocktakeQrActive)try{await toggleStocktakeScanner()}catch{}document.querySelectorAll('#mainContent > div').forEach(d=>d.classList.add('hidden'));const view=document.getElementById(tab+'View');if(!view)return;view.classList.remove('hidden');document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active','text-blue-600','bg-blue-50'));if(sourceBtn)sourceBtn.classList.add('active','text-blue-600','bg-blue-50');if(tab==='dashboard'){filterItems();loadAnomalyCenter();}if(tab==='manual'){populateLocationSelectors();toggleManualMode();}if(tab==='scanner'){populateLocationSelectors();setScanMode(scanMode);}if(tab==='report')generateReport();if(tab==='stocktake'){populateLocationSelectors();await refreshStocktakeWorkflow();}if(tab==='admin')await renderAdminInventory();window.scrollTo(0,0);}
 
 
 let lastClientLogAt = 0;
