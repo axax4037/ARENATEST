@@ -1,4 +1,4 @@
-const CACHE_NAME = 'arenastone-static-v20260820-commercial-v4-3';
+const CACHE_NAME = 'arenastone-static-v20260820-commercial-v4-4';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -19,6 +19,8 @@ self.addEventListener('activate', event => {
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window' }))
+      .then(clients => Promise.all(clients.map(client => client.navigate(client.url))))
   );
 });
 
@@ -43,11 +45,12 @@ self.addEventListener('fetch', event => {
 
     event.waitUntil(update.then(() => undefined));
     event.respondWith((async () => {
+      const online = await update;
+      if (online) return online;
       const cache = await caches.open(CACHE_NAME);
       const cached = await cache.match('./index.html') || await cache.match(request);
       if (cached) return cached;
-      const online = await update;
-      return online || Response.error();
+      return Response.error();
     })());
     return;
   }
