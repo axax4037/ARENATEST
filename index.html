@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>山石診所 | 智慧庫存管理系統</title>
     <link rel="stylesheet" href="./app.css">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="./icon-192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-gray-50 min-h-screen pb-20 font-sans selection:bg-blue-200">
@@ -40,8 +45,10 @@
             <div class="flex items-center gap-2 shrink-0">
                 <span id="currentUserTag" class="text-[11px] md:text-xs bg-blue-50 text-blue-700 px-2 py-1.5 rounded-md font-bold border border-blue-100 shadow-sm">👤 未登入</span>
                 <span id="sessionTimer" class="text-[11px] bg-amber-50 text-amber-700 px-2 py-1.5 rounded-md font-mono font-bold hidden border border-amber-200"></span>
+                <span id="networkStatus" class="network-badge network-online" title="網路與同步狀態"><i class="fas fa-wifi"></i><span class="network-label">線上</span></span>
                 <span id="loading-tag" class="text-blue-500 text-xs hidden animate-pulse font-bold bg-blue-50 px-2 py-1 rounded"><i class="fas fa-sync-alt fa-spin mr-1"></i>讀取中</span>
-                <button id="userManagementButton" onclick="openUserManagement()" class="hidden text-sm text-indigo-600 font-bold bg-indigo-50 border border-indigo-100 rounded-lg px-2 py-1.5 active:scale-95 transition-transform" aria-label="使用者管理" title="使用者管理"><i class="fas fa-users-cog"></i><span class="hidden md:inline ml-1">使用者</span></button>
+                <button id="pwaInstallBtn" onclick="installPwa()" class="hidden text-slate-600 hover:text-blue-600 p-1.5 rounded-lg border border-slate-200 bg-slate-50" title="安裝到裝置"><i class="fas fa-download"></i></button>
+                <button id="adminHeaderBtn" onclick="switchTab('admin')" class="hidden text-slate-600 hover:text-blue-600 p-1.5 rounded-lg border border-slate-200 bg-slate-50" title="管理中心"><i class="fas fa-user-shield"></i></button>
                 <button onclick="handleLogout()" class="text-sm text-red-500 font-bold ml-1 active:scale-90 transition-transform p-1"><i class="fas fa-sign-out-alt text-lg"></i></button>
             </div>
         </div>
@@ -52,21 +59,31 @@
         <!-- ======================= 1. 首頁總覽 ======================= -->
         <div id="dashboardView" class="space-y-3 animate-fade-in">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <div class="bg-white p-3 rounded-lg shadow-sm border border-gray-300 flex flex-col justify-center">
+                <button onclick="applyDashboardMetricFilter('all')" class="metric-card bg-white p-3 rounded-lg shadow-sm border border-gray-300 text-left">
                     <div class="text-gray-500 text-[11px] font-semibold mb-0.5 flex items-center gap-1"><i class="fas fa-cubes"></i> 總品項</div>
-                    <div id="totalItems" class="text-xl font-black text-slate-800">-</div>
-                </div>
-                <div class="bg-white p-3 rounded-lg shadow-sm border border-gray-300 flex flex-col justify-center">
+                    <div id="totalItems" class="text-xl font-black text-slate-800">-</div><div class="text-[9px] text-slate-400 mt-1">點擊顯示全部</div>
+                </button>
+                <button onclick="applyDashboardMetricFilter('today')" class="metric-card bg-white p-3 rounded-lg shadow-sm border border-gray-300 text-left">
                     <div class="text-gray-500 text-[11px] font-semibold mb-0.5 flex items-center gap-1"><i class="fas fa-check-circle text-green-500"></i> 今日盤點</div>
-                    <div id="todayCount" class="text-xl font-black text-green-600">-</div>
-                </div>
-                <div class="bg-white p-3 rounded-lg shadow-sm border border-gray-300 flex flex-col justify-center">
+                    <div id="todayCount" class="text-xl font-black text-green-600">-</div><div class="text-[9px] text-slate-400 mt-1">點擊篩選</div>
+                </button>
+                <button onclick="applyDashboardMetricFilter('pending')" class="metric-card bg-white p-3 rounded-lg shadow-sm border border-gray-300 text-left">
                     <div class="text-gray-500 text-[11px] font-semibold mb-0.5 flex items-center gap-1"><i class="fas fa-clock text-amber-500"></i> 待盤點</div>
-                    <div id="pendingCount" class="text-xl font-black text-amber-600">-</div>
-                </div>
-                <div class="bg-white p-3 rounded-lg shadow-sm border border-gray-300 flex flex-col justify-center">
+                    <div id="pendingCount" class="text-xl font-black text-amber-600">-</div><div class="text-[9px] text-slate-400 mt-1">點擊查看清單</div>
+                </button>
+                <button onclick="applyDashboardMetricFilter('low')" class="metric-card bg-white p-3 rounded-lg shadow-sm border border-gray-300 text-left">
                     <div class="text-gray-500 text-[11px] font-semibold mb-0.5 flex items-center gap-1"><i class="fas fa-exclamation-triangle text-red-500"></i> 低庫存警示</div>
-                    <div id="lowStockCount" class="text-xl font-black text-red-600">-</div>
+                    <div id="lowStockCount" class="text-xl font-black text-red-600">-</div><div class="text-[9px] text-slate-400 mt-1">點擊篩選</div>
+                </button>
+            </div>
+
+            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                <div class="text-[11px] font-bold text-slate-500 mb-2">快速作業</div>
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="switchTab('stocktake')" class="quick-action-btn bg-amber-50 text-amber-800 border-amber-200"><i class="fas fa-clipboard-check"></i><span>快速盤點</span></button>
+                    <button onclick="openManualAction('入庫')" class="quick-action-btn bg-blue-50 text-blue-800 border-blue-200"><i class="fas fa-arrow-circle-down"></i><span>快速入庫</span></button>
+                    <button onclick="openManualAction('領用')" class="quick-action-btn bg-rose-50 text-rose-800 border-rose-200"><i class="fas fa-arrow-circle-up"></i><span>快速領用</span></button>
+                    <button onclick="document.getElementById('searchInput').focus()" class="quick-action-btn bg-slate-50 text-slate-700 border-slate-200"><i class="fas fa-search"></i><span>查詢庫存</span></button>
                 </div>
             </div>
 
@@ -94,10 +111,11 @@
 
             <div class="bg-white p-3 rounded-lg shadow-sm border border-gray-300 space-y-2">
                 <div class="relative">
-                    <input type="text" id="searchInput" placeholder="搜尋名稱、ID 或 批號..." class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-shadow bg-gray-50 text-sm" oninput="debouncedFilterItems()">
+                    <input type="text" id="searchInput" placeholder="搜尋名稱、ID、批號或備註..." class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-shadow bg-gray-50 text-sm" oninput="debouncedFilterItems()">
                     <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-sm"></i>
                 </div>
                 <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                    <select id="dashboardLocationFilter" onchange="setDashboardLocationFilter()" class="px-2 py-1.5 bg-blue-50 border border-blue-200 rounded text-xs font-bold outline-none"><option value="0">全部儲位</option></select>
                     <select id="categoryFilter" onchange="filterItems()" class="px-2 py-1.5 bg-gray-50 border border-gray-300 rounded text-xs font-medium outline-none"><option value="">全部分類</option></select>
                     <select id="statusFilter" onchange="filterItems()" class="px-2 py-1.5 bg-gray-50 border border-gray-300 rounded text-xs font-medium outline-none">
                         <option value="">全部狀態</option><option value="today">今日已盤點</option><option value="week">7 天內已盤點</option><option value="overdue">超過 7 天未盤點</option>
@@ -105,11 +123,17 @@
                     <label class="flex items-center gap-1.5 whitespace-nowrap bg-gray-50 border border-gray-300 px-2 py-1.5 rounded text-xs font-medium cursor-pointer">
                         <input type="checkbox" id="lowStockOnly" onchange="filterItems()" class="rounded text-blue-600 w-3.5 h-3.5"><span>僅低庫存</span>
                     </label>
-                    <label class="flex items-center gap-1.5 whitespace-nowrap bg-gray-50 border border-gray-300 px-2 py-1.5 rounded text-xs font-medium cursor-pointer">
-                        <input type="checkbox" id="showHiddenZeroItems" onchange="filterItems()" class="rounded text-blue-600 w-3.5 h-3.5"><span>顯示已隱藏零庫存</span>
-                    </label>
                 </div>
             </div>
+
+            <section id="anomalyCenterCard" class="v4-panel">
+                <div class="v4-panel-title"><span><i class="fas fa-bell text-rose-500 mr-2"></i>異常中心</span><button onclick="loadAnomalyCenter(true)" class="v4-link-btn"><i class="fas fa-sync-alt"></i> 更新</button></div>
+                <div id="anomalyCenter" class="anomaly-grid"><div class="v4-muted">同步後顯示待處理異常</div></div>
+            </section>
+            <section id="dashboardAnalyticsCard" class="v4-panel">
+                <div class="v4-panel-title"><span><i class="fas fa-chart-line text-indigo-500 mr-2"></i>庫存趨勢與補貨</span><button onclick="switchTab('report')" class="v4-link-btn">完整分析</button></div>
+                <div id="dashboardAnalytics" class="v4-muted">同步後顯示使用量與補貨建議</div>
+            </section>
 
             <div id="itemsList" class="space-y-3"></div>
         </div>
@@ -140,8 +164,9 @@
                 </div>
                 <div id="scanForm" class="hidden mt-4 space-y-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
                     <h3 id="scanFormTitle" class="font-bold text-blue-800 border-b border-blue-200 pb-2 text-sm flex items-center gap-2"><i class="fas fa-clipboard-list"></i> 填寫表單明細</h3>
+                    <div><label class="block text-xs font-bold text-slate-600 mb-1.5 ml-1">作業儲位 <span class="text-red-500">*</span></label><select id="scanLocation" onchange="refreshScannerLocationContext()" class="w-full px-4 py-2.5 border border-blue-200 rounded-xl bg-white font-bold text-slate-700 text-sm"></select></div>
                     <div><label class="block text-xs font-bold text-slate-600 mb-1.5 ml-1">品項名稱</label><input type="text" id="scanName" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl font-bold text-slate-700 outline-none focus:border-blue-500 text-sm bg-white"></div>
-                    <div id="scanBatchContainer" class="hidden"><label class="block text-xs font-bold text-blue-600 mb-1.5 ml-1">選擇歷史批次</label><select id="scanBatchSelect" class="w-full px-4 py-2.5 border-2 border-blue-300 rounded-xl bg-white font-bold text-slate-700 text-sm outline-none"></select></div>
+                    <div id="scanBatchContainer" class="hidden space-y-2"><label class="block text-xs font-bold text-blue-600 mb-1.5 ml-1">領用批次</label><label class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-xs font-bold text-emerald-800"><input type="checkbox" id="scanUseFefo" checked onchange="toggleScannerFefo()"> 自動 FEFO（最早到期優先，可跨批次扣帳）</label><select id="scanBatchSelect" class="w-full px-4 py-2.5 border-2 border-blue-300 rounded-xl bg-white font-bold text-slate-700 text-sm outline-none"></select><div id="scanFefoHint" class="text-[10px] text-emerald-700 bg-emerald-50 rounded p-2">系統會由最早到期且有庫存的批次開始扣帳。</div></div>
                     <div id="scanManualDetails" class="grid grid-cols-2 gap-3">
                         <div><label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">批號 (LOT)</label><input type="text" id="scanLot" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl uppercase text-sm outline-none"></div>
                         <div><label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">有效日期</label><input type="date" id="scanExpiry" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm outline-none"></div>
@@ -164,12 +189,12 @@
                 <div class="space-y-4">
                     <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-50 space-y-4">
                         <div><label class="block text-xs font-bold text-slate-600 mb-1.5 ml-1">作業類型</label><select id="manualType" onchange="toggleManualMode()" class="w-full px-4 py-3 border-2 border-indigo-100 rounded-xl font-bold text-indigo-900 outline-none text-sm"><option value="入庫">📥 入庫建檔</option><option value="領用">📤 領用扣帳</option></select></div>
-                        <div><label class="block text-xs font-bold text-slate-600 mb-1.5 ml-1">ID / 代碼 <span class="text-red-500">*</span></label><input type="text" id="manualId" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl font-mono font-bold outline-none text-sm" list="existing-ids-list" oninput="autoFillManual()"></div>
+                        <div><label class="block text-xs font-bold text-slate-600 mb-1.5 ml-1">作業儲位 <span class="text-red-500">*</span></label><select id="manualLocation" onchange="refreshManualLocationContext()" class="w-full px-4 py-2.5 border border-indigo-200 rounded-xl bg-white font-bold text-slate-700 text-sm"></select></div>
+                        <div><label class="block text-xs font-bold text-slate-600 mb-1.5 ml-1">自訂 ID / 代碼 <span class="text-red-500">*</span></label><input type="text" id="manualId" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl font-mono font-bold outline-none text-sm" list="existing-ids-list" oninput="autoFillManual()"></div>
                         <datalist id="existing-ids-list"></datalist>
-                        <div id="manualNameInputContainer"><label class="block text-xs font-bold text-slate-600 mb-1.5 ml-1">品項名稱</label><input type="text" id="manualName" placeholder="若無輸入將帶入ID" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-slate-600 text-sm outline-none"></div>
-                        <div id="manualOutboundNameContainer" class="hidden"><label class="block text-xs font-bold text-indigo-700 mb-1.5 ml-1">選擇有庫存的品項 <span class="text-red-500">*</span></label><select id="manualOutboundNameSelect" onchange="selectManualOutboundItem()" class="w-full px-4 py-3 border-2 border-indigo-200 rounded-xl bg-white font-bold text-slate-700 text-sm outline-none"><option value="">請選擇品項</option></select></div>
+                        <div><label class="block text-xs font-bold text-slate-600 mb-1.5 ml-1">品項名稱</label><input type="text" id="manualName" placeholder="若無輸入將帶入ID" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-slate-600 text-sm outline-none"></div>
                     </div>
-                    <div id="manualBatchContainer" class="hidden px-2"><label class="block text-xs font-bold text-indigo-600 mb-1.5 ml-1">選擇指定扣帳批次</label><select id="manualBatchSelect" class="w-full px-4 py-2.5 border-2 border-indigo-200 rounded-xl font-bold text-slate-700 text-sm outline-none"></select></div>
+                    <div id="manualBatchContainer" class="hidden px-2 space-y-2"><label class="block text-xs font-bold text-indigo-600 mb-1.5 ml-1">領用批次</label><label class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-xs font-bold text-emerald-800"><input type="checkbox" id="manualUseFefo" checked onchange="toggleManualFefo()"> 自動 FEFO（最早到期優先，可跨批次扣帳）</label><select id="manualBatchSelect" class="w-full px-4 py-2.5 border-2 border-indigo-200 rounded-xl font-bold text-slate-700 text-sm outline-none"></select><div id="manualFefoHint" class="text-[10px] text-emerald-700">勾選時不用指定批次，系統會自動從最早到期批次開始扣帳。</div></div>
                     <div id="manualDetailsContainer" class="grid grid-cols-2 gap-3 px-2">
                         <div><label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">批號 (LOT)</label><input type="text" id="manualLot" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl uppercase text-sm outline-none"></div>
                         <div><label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">有效日期</label><input type="date" id="manualExpiry" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm outline-none"></div>
@@ -179,6 +204,62 @@
                     <div class="px-2 pb-2"><label class="block text-xs font-bold text-slate-500 mb-1.5 ml-1">備註 (選填)</label><textarea id="manualNote" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm outline-none resize-none" rows="2"></textarea></div>
                     <button onclick="submitManual()" id="manualSubmitBtn" class="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold shadow-lg active:scale-95 transition-transform">送出作業</button>
                 </div>
+            </div>
+        </div>
+
+
+        <!-- ======================= 商用盤點工作階段 ======================= -->
+        <div id="stocktakeView" class="hidden space-y-4">
+            <div class="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-100">
+                <div class="flex items-start justify-between gap-3 mb-4">
+                    <div><h2 class="text-lg font-bold text-slate-800 flex items-center"><i class="fas fa-clipboard-check mr-2 text-amber-500"></i>盤點工作階段</h2><p class="text-xs text-slate-500 mt-1">掃描 → 輸入實盤 → 立即記錄差異與稽核軌跡</p></div>
+                    <span id="stocktakeSessionBadge" class="text-[10px] font-bold px-2 py-1 rounded bg-slate-100 text-slate-600">未開始</span>
+                </div>
+                <div id="stocktakeStartPanel" class="space-y-3">
+                    <div><label class="block text-xs font-bold text-slate-600 mb-1.5">盤點儲位</label><select id="stocktakeLocation" class="w-full border border-amber-200 rounded-xl p-3 text-sm font-bold bg-white"></select></div>
+                    <label class="flex items-center gap-3 p-3 bg-violet-50 border border-violet-200 rounded-xl"><input type="checkbox" id="stocktakeBlindMode" class="w-4 h-4"><div><div class="text-sm font-bold text-violet-800">盲盤模式</div><div class="text-[10px] text-violet-600">盤點前隱藏帳面數量，送出後才顯示差異。</div></div></label>
+                    <textarea id="stocktakeSessionNote" rows="2" placeholder="本次盤點備註（選填）" class="w-full border border-slate-300 rounded-xl p-3 text-sm"></textarea>
+                    <button onclick="startStocktakeWorkflow()" id="stocktakeStartBtn" class="w-full py-3 bg-amber-500 text-slate-900 rounded-xl font-black shadow active:scale-95">開始今日盤點</button>
+                </div>
+                <div id="stocktakeActivePanel" class="hidden space-y-4">
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="stocktake-kpi"><span>進度</span><b id="stocktakeProgress">0 / 0</b></div>
+                        <div class="stocktake-kpi"><span>一致</span><b id="stocktakeMatchCount" class="text-green-600">0</b></div>
+                        <div class="stocktake-kpi"><span>差異</span><b id="stocktakeVarianceCount" class="text-red-600">0</b></div>
+                    </div>
+                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div id="stocktakeProgressBar" class="h-full bg-amber-500 rounded-full transition-all" style="width:0%"></div></div>
+                    <div class="bg-slate-900 rounded-xl p-3 text-white">
+                        <div class="flex justify-between items-center mb-2"><span class="text-xs font-bold"><i class="fas fa-barcode mr-1 text-amber-400"></i>快速掃碼盤點</span><button onclick="toggleStocktakeScanner()" id="stocktakeScannerBtn" class="px-3 py-1.5 rounded bg-amber-500 text-slate-900 text-xs font-bold">開啟相機</button></div>
+                        <div id="stocktakeReaderWrap" class="hidden"><div id="stocktakeReader" class="rounded overflow-hidden"></div></div>
+                        <div class="mt-2"><input id="stocktakeCodeInput" onkeydown="if(event.key==='Enter'){selectStocktakeByCode(this.value)}" placeholder="也可輸入/掃描品項 ID 後按 Enter" class="w-full p-2 rounded bg-slate-800 border border-slate-600 text-white text-sm font-mono"></div>
+                    </div>
+                    <div id="stocktakeCountPanel" class="hidden border-2 border-amber-200 bg-amber-50/60 rounded-xl p-4 space-y-3">
+                        <div class="flex justify-between items-start gap-2"><div><div id="stocktakeSelectedName" class="font-black text-slate-800"></div><div id="stocktakeSelectedMeta" class="text-[10px] text-slate-500 font-mono"></div></div><span id="stocktakeSystemQty" class="text-xs bg-white border rounded px-2 py-1 font-bold"></span></div>
+                        <select id="stocktakeBatchSelect" onchange="selectStocktakeBatch(this.value)" class="w-full border border-amber-300 rounded-lg p-2 text-sm font-bold"></select>
+                        <div><label class="text-xs font-bold text-slate-600">實盤數量</label><div class="flex gap-2 mt-1"><button onclick="adjustStocktakeQty(-1)" class="stocktake-step-btn">−</button><input type="number" id="stocktakeQty" min="0" oninput="updateStocktakeReasonVisibility()" class="flex-1 min-w-0 text-center text-3xl font-black border-2 border-amber-300 rounded-xl p-2"><button onclick="adjustStocktakeQty(1)" class="stocktake-step-btn">＋</button></div></div>
+                        <div id="stocktakeReasonWrap" class="hidden"><label class="text-xs font-bold text-red-700">差異原因</label><select id="stocktakeReason" class="w-full border border-red-200 rounded-lg p-2 text-sm"><option value="">請選擇</option><option>使用耗損</option><option>未登錄領用</option><option>破損</option><option>過期報廢</option><option>盤盈</option><option>其他</option></select></div>
+                        <textarea id="stocktakeLineNote" rows="2" placeholder="盤點備註（選填）" class="w-full border border-slate-300 rounded-lg p-2 text-sm"></textarea>
+                        <button onclick="submitStocktakeCount()" id="stocktakeCountBtn" class="w-full py-3 bg-green-600 text-white rounded-xl font-black shadow">確認並繼續下一筆</button>
+                    </div>
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3"><div class="flex justify-between items-center mb-2"><span class="text-xs font-black text-slate-700">待盤點 Checklist</span><input id="stocktakeChecklistSearch" oninput="renderStocktakeChecklist()" placeholder="搜尋" class="w-32 border rounded px-2 py-1 text-xs"></div><div id="stocktakeChecklist" class="space-y-2 max-h-[420px] overflow-y-auto"></div></div>
+                    <div class="grid grid-cols-2 gap-2"><button onclick="cancelStocktakeWorkflow()" class="py-2.5 border border-slate-300 text-slate-600 rounded-xl font-bold text-sm">取消工作階段</button><button onclick="completeStocktakeWorkflow()" id="stocktakeCompleteBtn" class="py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm">完成盤點</button></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================= 管理中心（Admin） ======================= -->
+        <div id="adminView" class="hidden space-y-4">
+            <div class="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between gap-2 mb-4"><h2 class="text-lg font-bold text-slate-800"><i class="fas fa-user-shield text-blue-600 mr-2"></i>管理中心</h2><span id="adminRoleBadge" class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded"></span></div>
+                <div class="admin-tabs-scroll mb-4">
+                    <button onclick="renderAdminInventory()" class="admin-subtab"><i class="fas fa-boxes mr-1"></i>品項/批次</button>
+                    <button onclick="renderMovementCenter()" class="admin-subtab"><i class="fas fa-exchange-alt mr-1"></i>異動單</button>
+                    <button onclick="loadLocationManager()" class="admin-subtab"><i class="fas fa-warehouse mr-1"></i>儲位</button>
+                    <button onclick="loadAuditCenter()" class="admin-subtab"><i class="fas fa-history mr-1"></i>稽核</button>
+                    <button id="adminUsersTab" onclick="loadAdminUsers()" class="admin-subtab"><i class="fas fa-users-cog mr-1"></i>使用者</button>
+                    <button id="adminSystemTab" onclick="loadSystemCenter()" class="admin-subtab"><i class="fas fa-shield-alt mr-1"></i>系統</button>
+                </div>
+                <div id="adminContent" class="space-y-3"></div>
             </div>
         </div>
 
@@ -202,6 +283,8 @@
         <div id="reportView" class="hidden space-y-4">
              <div class="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-100">
                 <h2 class="text-lg font-bold mb-4 text-slate-800 flex items-center"><i class="fas fa-chart-pie mr-2 text-rose-500"></i>庫存狀態與預警分析</h2>
+                <div id="reportAnalytics" class="space-y-4 mb-4"></div>
+                <div id="reportAnomalies" class="space-y-4 mb-4"></div>
                 <div id="reportContent" class="space-y-4"></div>
             </div>
             <div class="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-100 mt-4">
@@ -213,38 +296,19 @@
                             <div><h3 class="font-bold text-indigo-800 text-sm mb-1">即時發送本月結算</h3></div>
                             <button onclick="triggerManualReport()" id="btnManualReport" class="w-full py-2.5 bg-indigo-600 text-white rounded-lg font-bold shadow-sm mt-3 text-sm">立即寄發本月報表</button>
                         </div>
-                        <div id="autoReportAdminOnlyNotice" class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-center text-center">
-                            <div><i class="fas fa-user-shield text-slate-400 text-xl mb-2"></i><p class="text-sm font-bold text-slate-600">自動寄送僅限管理員設定</p></div>
-                        </div>
-                        <div id="autoReportAdminPanel" class="hidden bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 flex-col justify-between">
+                        <div class="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 flex flex-col justify-between">
                             <div>
                                 <h3 class="font-bold text-emerald-800 text-sm mb-1">每月自動發送設定</h3>
-                                <p id="autoReportSubscriptionStatus" class="text-xs font-bold text-slate-600 bg-white border border-emerald-100 rounded-lg px-3 py-2 mt-2">讀取訂閱狀態中…</p>
                                 <div class="flex items-center gap-2 mt-2">
                                     <span class="text-xs font-bold">固定於每月</span>
                                     <select id="autoReportDay" class="px-2 py-1 border border-emerald-200 rounded-md text-sm font-bold"><option value="1">1</option><option value="5" selected>5</option><option value="10">10</option></select>
                                     <span class="text-xs font-bold">日寄出</span>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-1 gap-2 mt-3">
-                                <button onclick="saveAutoSchedule()" id="btnAutoSchedule" class="w-full py-2.5 bg-emerald-600 text-white rounded-lg font-bold shadow-sm text-sm">儲存排程設定</button>
-                                <button onclick="cancelAutoSchedule()" id="btnCancelAutoSchedule" class="hidden w-full py-2.5 bg-white text-red-600 border border-red-200 rounded-lg font-bold text-sm">取消訂閱</button>
-                            </div>
+                            <button onclick="saveAutoSchedule()" id="btnAutoSchedule" class="w-full py-2.5 bg-emerald-600 text-white rounded-lg font-bold shadow-sm mt-3 text-sm">儲存排程設定</button>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- ======================= 6. 管理者庫存編輯 ======================= -->
-        <div id="adminView" class="hidden space-y-4">
-            <div class="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-gray-100">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
-                    <div><h2 class="text-lg font-bold text-slate-800 flex items-center"><i class="fas fa-user-shield mr-2 text-indigo-600"></i>管理者庫存頁面</h2><p class="text-xs text-slate-500 mt-1">可直接修改 LOT、有效期限與庫存量；每次修改都會留下異動紀錄。</p></div>
-                    <button onclick="openUserManagement()" class="px-3 py-2 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg font-bold text-sm"><i class="fas fa-users-cog mr-1"></i>使用者管理</button>
-                </div>
-                <div class="relative mb-4"><input type="text" id="adminInventorySearch" oninput="renderAdminInventory()" placeholder="搜尋品名、ID 或 LOT..." class="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-sm outline-none"><i class="fas fa-search absolute left-3 top-3.5 text-gray-400 text-sm"></i></div>
-                <div id="adminInventoryList" class="space-y-3"></div>
             </div>
         </div>
 
@@ -252,7 +316,7 @@
 
     <!-- 底部導航列 (改為 5 個按鈕) -->
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 pb-safe">
-        <div id="bottomNavGrid" class="max-w-6xl mx-auto grid grid-cols-5 py-1.5 px-1">
+        <div class="max-w-6xl mx-auto grid grid-cols-6 py-1.5 px-1">
             <button onclick="switchTab('dashboard', this)" class="nav-item active flex flex-col items-center py-2 rounded-lg hover:bg-blue-50 transition-colors">
                 <i class="fas fa-home text-lg mb-1"></i><span class="text-[10px] font-bold">總覽</span>
             </button>
@@ -262,14 +326,14 @@
             <button onclick="switchTab('manual', this)" class="nav-item flex flex-col items-center py-2 rounded-lg hover:bg-blue-50 transition-colors">
                 <i class="fas fa-keyboard text-lg mb-1"></i><span class="text-[10px] font-bold">手動</span>
             </button>
+            <button onclick="switchTab('stocktake', this)" class="nav-item flex flex-col items-center py-2 rounded-lg hover:bg-amber-50 transition-colors">
+                <i class="fas fa-clipboard-check text-lg mb-1"></i><span class="text-[10px] font-bold">盤點</span>
+            </button>
             <button onclick="switchTab('threshold', this)" class="nav-item flex flex-col items-center py-2 rounded-lg hover:bg-blue-50 transition-colors">
                 <i class="fas fa-sliders-h text-lg mb-1"></i><span class="text-[10px] font-bold">門檻</span>
             </button>
             <button onclick="switchTab('report', this)" class="nav-item flex flex-col items-center py-2 rounded-lg hover:bg-blue-50 transition-colors">
                 <i class="fas fa-chart-line text-lg mb-1"></i><span class="text-[10px] font-bold">報表</span>
-            </button>
-            <button id="adminNavButton" onclick="switchTab('admin', this)" class="nav-item hidden flex flex-col items-center py-2 rounded-lg hover:bg-blue-50 transition-colors">
-                <i class="fas fa-user-shield text-lg mb-1"></i><span class="text-[10px] font-bold">管理者</span>
             </button>
         </div>
     </nav>
@@ -283,41 +347,6 @@
         </div>
     </div>
 
-    <!-- 管理員限定：使用者管理 -->
-    <div id="userManagementModal" class="fixed inset-0 modal-overlay mobile-modal-overlay hidden z-[90] p-3 md:p-5">
-        <div class="mobile-modal-panel bg-white rounded-2xl w-full max-w-3xl shadow-2xl border border-gray-100">
-            <div class="mobile-modal-header bg-white border-b border-gray-100 px-4 py-3 flex justify-between items-center z-10">
-                <div><h2 class="font-black text-slate-800"><i class="fas fa-users-cog text-indigo-600 mr-2"></i>使用者管理</h2><p class="text-[11px] text-slate-500 mt-0.5">只有管理員可以查看與修改</p></div>
-                <button onclick="closeUserManagement()" class="w-9 h-9 rounded-full bg-slate-100 text-slate-600 active:scale-95" aria-label="關閉"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="mobile-modal-body p-4 space-y-5">
-                <section class="bg-indigo-50/60 border border-indigo-100 rounded-xl p-4 space-y-3">
-                    <h3 class="font-bold text-indigo-900 text-sm"><i class="fas fa-user-plus mr-1"></i>新增使用者</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div><label class="block text-xs font-bold text-slate-600 mb-1">登入帳號</label><input id="newUserAccount" type="text" maxlength="64" autocomplete="off" class="w-full px-3 py-2.5 border border-indigo-200 rounded-lg bg-white outline-none focus:border-indigo-500" placeholder="例如 nurse01"></div>
-                        <div><label class="block text-xs font-bold text-slate-600 mb-1">顯示名稱</label><input id="newUserDisplayName" type="text" maxlength="80" autocomplete="off" class="w-full px-3 py-2.5 border border-indigo-200 rounded-lg bg-white outline-none focus:border-indigo-500" placeholder="例如 護理師小美"></div>
-                        <div><label class="block text-xs font-bold text-slate-600 mb-1">密碼</label><input id="newUserPassword" type="password" autocomplete="new-password" class="w-full px-3 py-2.5 border border-indigo-200 rounded-lg bg-white outline-none focus:border-indigo-500" placeholder="不可空白"></div>
-                        <div><label class="block text-xs font-bold text-slate-600 mb-1">權限</label><select id="newUserRole" class="w-full px-3 py-2.5 border border-indigo-200 rounded-lg bg-white outline-none focus:border-indigo-500"><option value="user">一般使用者</option><option value="admin">管理員</option></select></div>
-                    </div>
-                    <button id="createUserButton" onclick="createManagedUser()" class="w-full md:w-auto px-5 py-2.5 bg-indigo-600 text-white rounded-lg font-bold shadow-sm active:scale-95"><i class="fas fa-plus mr-1"></i>新增帳號</button>
-                </section>
-                <section>
-                    <div class="flex items-center justify-between mb-3"><h3 class="font-bold text-slate-800 text-sm">現有使用者</h3><button onclick="loadManagedUsers()" class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg"><i class="fas fa-sync-alt mr-1"></i>重新整理</button></div>
-                    <div id="managedUsersList" class="space-y-2"><div class="text-center text-slate-400 py-6"><i class="fas fa-spinner fa-spin mr-1"></i>讀取中</div></div>
-                </section>
-            </div>
-        </div>
-    </div>
-
-    <div id="resetUserPasswordModal" class="fixed inset-0 modal-overlay hidden items-center justify-center z-[95] p-4">
-        <div class="bg-white rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-gray-100 space-y-4">
-            <div class="text-center"><div class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-2"><i class="fas fa-key"></i></div><h3 class="font-black text-slate-800">重設密碼</h3><p id="resetUserPasswordTarget" class="text-xs text-slate-500 mt-1"></p></div>
-            <div><label class="block text-xs font-bold text-slate-600 mb-1">新密碼</label><input id="managedResetPassword" type="password" autocomplete="new-password" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-amber-500"></div>
-            <div><label class="block text-xs font-bold text-slate-600 mb-1">再次輸入</label><input id="managedResetPasswordConfirm" type="password" autocomplete="new-password" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-amber-500"></div>
-            <div class="flex gap-2"><button onclick="closeResetUserPassword()" class="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-lg font-bold">取消</button><button id="resetUserPasswordButton" onclick="submitManagedPasswordReset()" class="flex-1 py-2.5 bg-amber-500 text-white rounded-lg font-bold">確認重設</button></div>
-        </div>
-    </div>
-
     <script>
         // ⚠️ 部署 Cloudflare Worker 後，將下方網址替換成 Wrangler deploy 顯示的 workers.dev 網址
         const API_URL = "https://shanshi-inventory-api.arenastone-tw.workers.dev";
@@ -325,11 +354,12 @@
         let allItems = [], filteredItems = [], scanMode = 'inbound', scannedData = null;
         let html5QrCode = null, homeQrCode = null, isScanningActive = false, isHomeScanningActive = false;
         let CURRENT_USER_NAME = "";
-        let CURRENT_USER_ACCOUNT = "";
-        let CURRENT_USER_ROLE = "";
+        let CURRENT_USER_ROLE = "user";
         let CURRENT_SESSION_TOKEN = "";
-        let managedUsers = [];
-        let managedResetUserId = null;
+        let currentStocktakeSession = null;
+        let selectedStocktakeLine = null;
+        let stocktakeQrCode = null;
+        let stocktakeQrActive = false;
         let lastScanTime = 0, sessionInterval = null;
         let modifiedScanIndices = new Set();
 
@@ -357,58 +387,16 @@
         // 效能索引：每次取得最新庫存後只建立一次，避免畫面操作時反覆掃描 allItems。
         const itemIndexes = {
             byId: new Map(),
-            totalsByName: new Map(),
+            totalsById: new Map(),
+            totalsByName: new Map(), // 相容舊畫面；商用統計一律以 ID 為主鍵
             sourceIndexByBatch: new Map()
         };
         
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function setSyncState(state) {
-    const tag = document.getElementById('loading-tag');
-    if (!tag) return;
-    if (syncStateHideTimer) {
-        clearTimeout(syncStateHideTimer);
-        syncStateHideTimer = null;
-    }
+/* superseded setSyncState removed in Commercial v4 cleanup */
 
-    if (state === 'syncing') {
-        tag.className = 'text-blue-600 text-xs animate-pulse font-bold bg-blue-50 px-2 py-1 rounded border border-blue-100';
-        tag.innerHTML = '<i class="fas fa-sync-alt fa-spin mr-1"></i>同步中';
-        tag.classList.remove('hidden');
-    } else if (state === 'cached') {
-        tag.className = 'text-amber-700 text-xs font-bold bg-amber-50 px-2 py-1 rounded border border-amber-200';
-        tag.innerHTML = '<i class="fas fa-database mr-1"></i>暫存資料';
-        tag.classList.remove('hidden');
-    } else if (state === 'error') {
-        tag.className = 'text-red-600 text-xs font-bold bg-red-50 px-2 py-1 rounded border border-red-200';
-        tag.innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i>同步失敗';
-        tag.classList.remove('hidden');
-    } else if (state === 'synced') {
-        tag.className = 'text-green-700 text-xs font-bold bg-green-50 px-2 py-1 rounded border border-green-200';
-        tag.innerHTML = '<i class="fas fa-check-circle mr-1"></i>已同步';
-        tag.classList.remove('hidden');
-        syncStateHideTimer = setTimeout(() => tag.classList.add('hidden'), 1200);
-    } else {
-        tag.classList.add('hidden');
-    }
-}
+/* superseded normalizeInventoryItem removed in Commercial v4 cleanup */
 
-function normalizeInventoryItem(item) {
-    const id = String(item?.id ?? '').trim();
-    const name = String(item?.name ?? '').trim() || id;
-    return {
-        rowId: Number(item?.rowId) || 0,
-        id,
-        name,
-        category: String(item?.category ?? ''),
-        lot: String(item?.lot ?? ''),
-        expiry: String(item?.expiry ?? ''),
-        qty: parseInt(item?.qty) || 0,
-        min_qty: parseInt(item?.min_qty) || 0,
-        price: parseFloat(item?.price) || 0,
-        isHidden: item?.isHidden === true,
-        last_stocktake: String(item?.last_stocktake ?? '')
-    };
-}
 
 function saveInventoryCache() {
     try {
@@ -520,20 +508,8 @@ function scheduleBackgroundSync(delay = 800) {
         flushBackgroundSync();
     }, delay);
 }
+/* superseded refreshCurrentViews removed in Commercial v4 cleanup */
 
-function refreshCurrentViews() {
-    rebuildItemIndexes();
-    updateDashboard();
-    updateCategoryFilter();
-    updateManualIdList();
-    updateManualOutboundOptions();
-    // 隱藏中的首頁不預先重畫，避免存檔成功後還花時間建立大量 DOM；切回首頁時會立即 render。
-    if (!document.getElementById('dashboardView').classList.contains('hidden')) filterItems();
-    if (!document.getElementById('thresholdView').classList.contains('hidden')) renderThresholds();
-    if (!document.getElementById('reportView').classList.contains('hidden')) generateReport();
-    if (!document.getElementById('adminView').classList.contains('hidden')) renderAdminInventory();
-    scheduleInventoryCacheSave();
-}
 
 function mergeUpdatedItems(updatedItems) {
     if (!Array.isArray(updatedItems) || updatedItems.length === 0) return;
@@ -702,32 +678,8 @@ async function postApi(payload, options = {}) {
                 scheduleBackgroundSync(80);
             }
         });
+/* superseded checkLoginSession removed in Commercial v4 cleanup */
 
-function checkLoginSession() {
-    const sessionStr = localStorage.getItem('SHANSHI_SESSION');
-    if (sessionStr) {
-        try {
-            const session = JSON.parse(sessionStr);
-            const now = Date.now();
-            const serverExpiry = session.expiresAt ? Date.parse(session.expiresAt) : 0;
-            const stillValid = session.token && (serverExpiry ? now < serverExpiry : now - session.timestamp < 1800000);
-            if (stillValid) {
-                CURRENT_USER_NAME = session.name;
-                CURRENT_USER_ACCOUNT = session.account || '';
-                CURRENT_USER_ROLE = session.role || '';
-                CURRENT_SESSION_TOKEN = session.token;
-                document.getElementById('currentUserTag').innerText = `👤 ${session.name}`;
-                applyUserRoleUi();
-                document.getElementById('loginPortal').classList.add('hidden');
-                startSessionTimer(session.timestamp || now, session.expiresAt || '');
-                hydrateInventoryCache();
-                loadData();
-                return;
-            }
-        } catch(e) {}
-    }
-    handleLogout();
-}
 
         function startSessionTimer(startTimestamp, expiresAt = '') {
             if(sessionInterval) clearInterval(sessionInterval);
@@ -748,64 +700,10 @@ function checkLoginSession() {
                 }
             }, 1000);
         }
+/* superseded handlePortalLogin removed in Commercial v4 cleanup */
 
-async function handlePortalLogin() {
-    const acc = document.getElementById('loginAccount').value.trim();
-    const pwd = document.getElementById('loginPassword').value.trim();
-    const btn = document.getElementById('loginBtn');
-    if(!acc || !pwd) { showAlert("請輸入代號與密碼！"); return; }
+/* superseded handleLogout removed in Commercial v4 cleanup */
 
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>連線驗證中...';
-    try {
-        const res = await postApi({ action: 'login', account: acc, password: pwd });
-        CURRENT_USER_NAME = res.name;
-        CURRENT_USER_ACCOUNT = res.account || acc;
-        CURRENT_USER_ROLE = res.role || 'user';
-        CURRENT_SESSION_TOKEN = res.token || '';
-        if (!CURRENT_SESSION_TOKEN) throw new Error('伺服器未回傳登入憑證');
-        document.getElementById('currentUserTag').innerText = `👤 ${res.name}`;
-        document.getElementById('loginPortal').classList.add('hidden');
-        const now = Date.now();
-        localStorage.setItem('SHANSHI_SESSION', JSON.stringify({ account: CURRENT_USER_ACCOUNT, name: res.name, role: CURRENT_USER_ROLE, token: CURRENT_SESSION_TOKEN, timestamp: now, expiresAt: res.expiresAt || '' }));
-        applyUserRoleUi();
-        startSessionTimer(now, res.expiresAt || '');
-        hydrateInventoryCache();
-        loadData();
-    } catch(e) {
-        showAlert("🚨 登入失敗：\n" + e.message);
-    } finally {
-        btn.disabled = false;
-        btn.innerText = "登入";
-    }
-}
-
-function handleLogout() {
-    if(sessionInterval) clearInterval(sessionInterval);
-    if (backgroundSyncTimer) clearTimeout(backgroundSyncTimer);
-    hasLiveInventory = false;
-    inventorySyncPromise = null;
-    document.getElementById('sessionTimer').classList.add('hidden');
-    const logoutToken = CURRENT_SESSION_TOKEN;
-    localStorage.removeItem('SHANSHI_SESSION');
-    CURRENT_USER_NAME = "";
-    CURRENT_USER_ACCOUNT = "";
-    CURRENT_USER_ROLE = "";
-    CURRENT_SESSION_TOKEN = "";
-    managedUsers = [];
-    managedResetUserId = null;
-    applyUserRoleUi();
-    closeResetUserPassword();
-    closeUserManagement();
-    if (logoutToken && API_URL && !API_URL.includes('REPLACE-WITH-YOUR-WORKER')) {
-        fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${logoutToken}` }, body: JSON.stringify({ action: 'logout', _requestId: createRequestId() }), keepalive: true }).catch(() => {});
-    }
-    document.getElementById('currentUserTag').innerText = `👤 未登入`;
-    document.getElementById('loginPortal').classList.remove('hidden');
-    document.getElementById('loginAccount').value = "";
-    document.getElementById('loginPassword').value = "";
-    setSyncState('hidden');
-}
 
         function showToast(message, type = 'error') {
             const container = document.getElementById('toast-container');
@@ -827,6 +725,10 @@ function handleLogout() {
         function closeAlert() {
             const modal = document.getElementById('alertModal');
             if(modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+        }
+
+        function taipeiYmd(date = new Date()) {
+            return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
         }
 
         function formatToYYYYMMDD(dateStr) {
@@ -852,31 +754,10 @@ function handleLogout() {
             if (lotStr.includes('GMT')) { try { const d = new Date(lotStr); if (!isNaN(d.getTime())) return formatToYYYYMMDD(d); } catch(e) {} }
             return lotStr.replace(/['"]/g, '').trim(); 
         }
+/* superseded getBatchIndexKey removed in Commercial v4 cleanup */
 
-        function getBatchIndexKey(item) {
-            return `${item.id}|||${formatToYYYYMMDD(item.expiry)}|||${cleanLotString(item.lot)}`;
-        }
+/* superseded rebuildItemIndexes removed in Commercial v4 cleanup */
 
-        function rebuildItemIndexes() {
-            itemIndexes.byId.clear();
-            itemIndexes.totalsByName.clear();
-            itemIndexes.sourceIndexByBatch.clear();
-
-            allItems.forEach((item, index) => {
-                if (!itemIndexes.byId.has(item.id)) itemIndexes.byId.set(item.id, []);
-                itemIndexes.byId.get(item.id).push(item);
-
-                if (!itemIndexes.totalsByName.has(item.name)) {
-                    itemIndexes.totalsByName.set(item.name, { qty: 0, min: item.min_qty || 0 });
-                }
-                itemIndexes.totalsByName.get(item.name).qty += (parseInt(item.qty) || 0);
-
-                const batchKey = getBatchIndexKey(item);
-                if (!itemIndexes.sourceIndexByBatch.has(batchKey)) {
-                    itemIndexes.sourceIndexByBatch.set(batchKey, index);
-                }
-            });
-        }
 
 async function fetchInventorySnapshot() {
     if (!CURRENT_SESSION_TOKEN) throw new Error('登入已失效，請重新登入');
@@ -892,29 +773,8 @@ async function fetchInventorySnapshot() {
     if (!Array.isArray(data?.items)) throw new Error('後端庫存資料格式異常');
     return data;
 }
+/* superseded applyInventoryData removed in Commercial v4 cleanup */
 
-function applyInventoryData(data, silentMode = false, options = {}) {
-    allItems = (data.items || []).map(normalizeInventoryItem);
-    rebuildItemIndexes();
-    updateDashboard();
-
-    if (silentMode) {
-        updateCategoryFilter();
-        updateManualIdList();
-        updateManualOutboundOptions();
-        if (!document.getElementById('dashboardView').classList.contains('hidden')) filterItems();
-    } else {
-        if (!document.getElementById('dashboardView').classList.contains('hidden')) filterItems();
-        updateCategoryFilter();
-        updateManualIdList();
-        updateManualOutboundOptions();
-    }
-
-    if (!document.getElementById('thresholdView').classList.contains('hidden')) renderThresholds();
-    if (!document.getElementById('reportView').classList.contains('hidden')) generateReport();
-    if (!document.getElementById('adminView').classList.contains('hidden')) renderAdminInventory();
-    if (options.persistCache !== false) saveInventoryCache();
-}
 
 async function syncInventory({ silentMode = false, showIndicator = false } = {}) {
     if (inventorySyncPromise) return inventorySyncPromise;
@@ -955,145 +815,17 @@ async function loadData() {
         }
     }
 }
+/* superseded updateDashboard removed in Commercial v4 cleanup */
 
-        function updateDashboard() {
-            const today = new Date().toISOString().split('T')[0];
-            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-            let todayCount = 0, pendingCount = 0, lowStockCount = 0;
-            
-            allItems.forEach(item => {
-                if (item.last_stocktake && item.last_stocktake >= today) todayCount++;
-                else if (!item.last_stocktake || item.last_stocktake < weekAgo) pendingCount++;
-            });
-            
-            itemIndexes.totalsByName.forEach((v) => { if (v.qty <= v.min) lowStockCount++; });
-            document.getElementById('totalItems').textContent = itemIndexes.totalsByName.size;
-            document.getElementById('todayCount').textContent = todayCount;
-            document.getElementById('pendingCount').textContent = pendingCount;
-            document.getElementById('lowStockCount').textContent = lowStockCount;
+/* superseded renderItems removed in Commercial v4 cleanup */
+
+
+        function escapeHtmlClient(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
         }
-
-        function renderItems(items) {
-            const container = document.getElementById('itemsList');
-            const grouped = new Map();
-            
-            items.forEach(item => {
-                if (parseInt(item.qty) >= 0) {
-                    const groupKey = `${item.id}|||${item.name}`; 
-                    if (!grouped.has(groupKey)) grouped.set(groupKey, new Map());
-                    
-                    const pNameMap = grouped.get(groupKey);
-                    const batchKey = `${formatToYYYYMMDD(item.expiry)}|||${cleanLotString(item.lot)}`;
-                    
-                    if (pNameMap.has(batchKey)) {
-                        const existing = pNameMap.get(batchKey);
-                        existing.qty += parseInt(item.qty);
-                        if (item.last_stocktake > existing.last_stocktake) {
-                            existing.last_stocktake = item.last_stocktake;
-                        }
-                    } else {
-                        pNameMap.set(batchKey, {
-                            id: item.id, name: item.name, category: item.category,
-                            qty: parseInt(item.qty), min_qty: item.min_qty,
-                            expiry: item.expiry, lot: item.lot, last_stocktake: item.last_stocktake,
-                            isHidden: item.isHidden === true
-                        });
-                    }
-                }
-            });
-
-            if (grouped.size === 0) {
-                container.innerHTML = '<div class="text-center text-gray-400 py-8 font-bold bg-white rounded-lg border border-gray-300 shadow-sm">目前無符合條件的庫存資料</div>';
-                return;
-            }
-            
-            const today = new Date().toISOString().split('T')[0];
-            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-            let html = '';
-            
-            grouped.forEach((expiryMap, groupKey) => {
-                const [itemId, itemName] = groupKey.split('|||');
-                const batches = Array.from(expiryMap.values());
-                const baseItem = batches[0];
-                
-                let statusText = '需排程盤點';
-                let statusBg = 'bg-red-100 text-red-700 border-red-200';
-                let statusBorderColor = 'border-l-red-500';
-                
-                const latestStocktake = batches.reduce((latest, b) => { return (!latest || b.last_stocktake > latest) ? b.last_stocktake : latest; }, '');
-                if (latestStocktake >= today) { 
-                    statusText = '今日已盤點'; statusBg = 'bg-green-100 text-green-700 border-green-200'; statusBorderColor = 'border-l-green-500'; 
-                }
-                else if (latestStocktake >= weekAgo) { 
-                    statusText = '一週內已盤點'; statusBg = 'bg-amber-100 text-amber-700 border-amber-200'; statusBorderColor = 'border-l-amber-500';
-                }
-                
-                const totalQty = batches.reduce((sum, b) => sum + (parseInt(b.qty) || 0), 0);
-                const isLowStock = totalQty <= (baseItem.min_qty || 0);
-                const isCardHidden = batches.every(b => b.isHidden === true);
-                const encodedItemId = encodeURIComponent(itemId);
-                
-                html += `
-                    <div class="bg-white rounded-xl shadow-md border border-gray-300 border-l-[6px] ${statusBorderColor} mb-5 overflow-hidden transition-all hover:shadow-lg ${isCardHidden ? 'opacity-60' : ''}">
-                        <div class="p-3 md:p-4">
-                            <div class="flex justify-between items-start mb-2 gap-2">
-                                <div>
-                                    <h3 class="font-bold text-slate-800 text-sm md:text-base leading-tight"><i class="fas fa-box text-blue-500 text-xs mr-1 opacity-80"></i>${itemName}</h3>
-                                    <p class="font-mono text-[10px] text-gray-500 mt-0.5"><i class="fas fa-hashtag text-gray-400 text-[9px]"></i> ID: ${itemId}</p>
-                                </div>
-                                <span class="px-1.5 py-0.5 text-[10px] rounded border font-bold whitespace-nowrap shrink-0 ${statusBg}">${statusText}</span>
-                            </div>
-                            
-                            <div class="grid grid-cols-3 gap-1.5 mb-2.5 text-xs bg-slate-50 p-2 rounded-lg border border-slate-200">
-                                <div><div class="text-[10px] text-gray-500 font-medium">總庫存</div><div class="font-bold text-sm ${isLowStock ? 'text-red-600 animate-pulse' : 'text-blue-700'}">${totalQty}</div></div>
-                                <div><div class="text-[10px] text-gray-500 font-medium">安全門檻</div><div class="font-semibold text-gray-700 mt-0.5">${baseItem.min_qty || '0'}</div></div>
-                                <div><div class="text-[10px] text-gray-500 font-medium">盤點時間</div><div class="font-mono text-[10px] text-gray-600 mt-0.5">${formatToYYYYMMDDHHMM(latestStocktake)}</div></div>
-                            </div>
-                            ${totalQty === 0 ? `<div class="flex justify-end mb-2"><button onclick="toggleZeroItemHidden('${encodedItemId}', ${isCardHidden ? 'false' : 'true'})" class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold border ${isCardHidden ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-slate-100 text-slate-600 border-slate-200'}"><i class="fas ${isCardHidden ? 'fa-eye' : 'fa-eye-slash'} mr-1"></i>${isCardHidden ? '重新顯示卡片' : '隱藏零庫存卡片'}</button></div>` : ''}
-                            
-                            <div class="border-t border-gray-200 pt-3 mt-1">
-                                <p class="text-[11px] text-slate-500 font-bold mb-2 flex items-center gap-1"><i class="fas fa-layer-group text-slate-400"></i> 實體合併效期盤點：</p>
-                                <div class="space-y-2.5">
-                                    ${batches.map((b) => {
-                                        const cleanLot = cleanLotString(b.lot), cleanExpiry = formatToYYYYMMDD(b.expiry);
-                                        const globalIndex = itemIndexes.sourceIndexByBatch.get(`${b.id}|||${cleanExpiry}|||${cleanLot}`) ?? -1;
-                                        const isBarcode = /^[\x20-\x7E]+$/.test(String(b.id));
-
-                                        return `
-                                            <div id="inline-row-${globalIndex}" data-scan-id="${b.id}" class="p-2.5 rounded-lg border border-slate-300 bg-white flex flex-col transition-all shadow-sm">
-                                                <div class="flex justify-between items-center text-xs">
-                                                    <div class="max-w-[65%]">
-                                                        <p class="text-slate-700 font-medium leading-tight">效期: <span class="font-bold text-blue-700">${cleanExpiry}</span> <span class="text-gray-500 text-[10px]">(帳面: ${b.qty})</span></p>
-                                                        ${cleanLot !== '無' ? `<p class="font-mono text-[10px] text-gray-400 mt-0.5">批號: ${cleanLot}</p>` : ''}
-                                                    </div>
-                                                    <div id="action-trigger-box-${globalIndex}" class="shrink-0 flex items-center">
-                                                        ${isBarcode 
-                                                            ? `<button onclick="promptCameraScan()" class="bg-gray-50 text-gray-600 hover:text-blue-600 border border-gray-300 px-2 py-1 rounded text-[11px] font-bold whitespace-nowrap active:bg-gray-200 shadow-sm transition-colors"><i class="fas fa-camera mr-1"></i> 限掃碼</button>`
-                                                            : `<button onclick="startInlineStocktake(${globalIndex}, false)" class="bg-blue-50 text-blue-600 border border-blue-300 px-2 py-1 rounded text-[11px] font-bold whitespace-nowrap active:bg-blue-200 shadow-sm transition-colors"><i class="fas fa-keyboard mr-1"></i> 手動盤點</button>`
-                                                        }
-                                                    </div>
-                                                </div>
-                                                <div id="inline-input-panel-${globalIndex}" class="hidden mt-2 pt-2 border-t border-dashed border-gray-300 flex items-center justify-between gap-1.5">
-                                                    <div class="flex items-center gap-1">
-                                                        <span class="text-[10px] font-bold text-slate-500">實盤:</span>
-                                                        <button onclick="decrementInlineQty(${globalIndex})" id="inline-dec-btn-${globalIndex}" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 w-6 h-6 flex items-center justify-center rounded font-bold text-xs shadow-sm transition-colors">-1</button>
-                                                        <input type="number" id="inline-qty-${globalIndex}" min="0" value="0" disabled class="w-14 h-7 text-center border-2 border-slate-300 rounded font-mono font-bold text-xs bg-gray-100 outline-none focus:border-blue-500">
-                                                    </div>
-                                                    <div class="flex gap-1 shrink-0">
-                                                        <button onclick="submitCardStocktake(${globalIndex})" id="inline-save-btn-${globalIndex}" class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-[11px] font-bold shadow-sm hidden transition-colors flex items-center"><i class="fas fa-check mr-1"></i> 儲存</button>
-                                                        <button onclick="endInlineStocktake(${globalIndex})" id="inline-end-btn-${globalIndex}" class="bg-gray-400 hover:bg-gray-500 text-white px-2 py-1 rounded text-[11px] font-bold shadow-sm hidden transition-colors">放棄</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        `;
-                                    }).join('')}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
+        function fefoSortValue(item) {
+            const expiry = String(item?.expiry || '');
+            return `${expiry ? '0'+expiry : '1'}|||${String(item?.lot||'')}|||${String(item?.batch_id||'')}`;
         }
 
 async function promptCameraScan() {
@@ -1104,104 +836,12 @@ async function promptCameraScan() {
         if (panel.classList.contains('hidden')) { await toggleHomeScanner(); }
     }
 }
+/* superseded startInlineStocktake removed in Commercial v4 cleanup */
 
-function startInlineStocktake(index, isBarcodeScan = false) {
-    if (!hasLiveInventory) {
-        showToast('⚠️ 即時資料尚未同步完成，請稍候再操作', 'error');
-        return;
-    }
-    const row = document.getElementById(`inline-row-${index}`);
-    if (!row) return;
-    row.classList.add('border-amber-400', 'border-2', 'bg-amber-50');
-    row.classList.remove('border-slate-300', 'bg-white');
-    document.getElementById(`inline-input-panel-${index}`).classList.remove('hidden');
+/* superseded endInlineStocktake removed in Commercial v4 cleanup */
 
-    const qtyInput = document.getElementById(`inline-qty-${index}`);
-    const decBtn = document.getElementById(`inline-dec-btn-${index}`);
+/* superseded submitCardStocktake removed in Commercial v4 cleanup */
 
-    if (!modifiedScanIndices.has(index)) {
-        qtyInput.value = 0;
-        modifiedScanIndices.add(index);
-    }
-    if (isBarcodeScan) {
-        qtyInput.disabled = true;
-        qtyInput.className = "w-14 h-7 text-center border-2 border-amber-500 rounded font-mono font-bold text-xs bg-amber-100 text-amber-900 outline-none";
-        decBtn.classList.remove('hidden');
-        document.getElementById(`inline-save-btn-${index}`).classList.add('hidden');
-    } else {
-        qtyInput.disabled = false;
-        qtyInput.className = "w-14 h-7 text-center border-2 border-blue-500 rounded font-mono font-bold text-xs bg-white text-blue-900 outline-none focus:ring-2 focus:ring-blue-200";
-        decBtn.classList.add('hidden');
-        document.getElementById(`inline-save-btn-${index}`).classList.remove('hidden');
-    }
-    document.getElementById(`inline-end-btn-${index}`).classList.remove('hidden');
-    document.getElementById(`action-trigger-box-${index}`).classList.add('hidden');
-}
-
-        function endInlineStocktake(index) {
-            const row = document.getElementById(`inline-row-${index}`);
-            row.classList.remove('border-amber-400', 'border-2', 'bg-amber-50');
-            row.classList.add('border-slate-300', 'bg-white');
-            document.getElementById(`inline-input-panel-${index}`).classList.add('hidden');
-            const qtyInput = document.getElementById(`inline-qty-${index}`);
-            qtyInput.disabled = true;
-            qtyInput.className = "w-14 h-7 text-center border-2 border-slate-300 rounded font-mono font-bold text-xs bg-gray-100 outline-none";
-            qtyInput.value = allItems[index].qty; 
-            document.getElementById(`inline-save-btn-${index}`).classList.add('hidden');
-            document.getElementById(`inline-end-btn-${index}`).classList.add('hidden');
-            document.getElementById(`inline-dec-btn-${index}`).classList.add('hidden');
-            document.getElementById(`action-trigger-box-${index}`).classList.remove('hidden');
-            modifiedScanIndices.delete(index);
-        }
-
-async function submitCardStocktake(index) {
-    if (!(await ensureLiveInventoryReady())) return;
-    const inputField = document.getElementById(`inline-qty-${index}`);
-    const newQty = parseInt(inputField.value);
-    if (isNaN(newQty) || newQty < 0) { showAlert("數量不可為空或負數！"); return; }
-    if (!CURRENT_USER_NAME) { showAlert("請先登入操作身分！"); return; }
-
-    const item = allItems[index];
-    const oldQty = parseInt(item.qty) || 0;
-    const diffStr = (newQty - oldQty) > 0 ? `+${newQty - oldQty}` : (newQty - oldQty);
-    if (!confirm(`【單筆盤點確認】\n\n品名：${item.name}\n原庫存：${oldQty}\n實盤數：${newQty}\n差額：${diffStr}\n\n確定要儲存嗎？`)) return;
-
-    const saveBtn = document.getElementById(`inline-save-btn-${index}`);
-    const endBtn = document.getElementById(`inline-end-btn-${index}`);
-    saveBtn.disabled = true;
-    endBtn.disabled = true;
-    inputField.disabled = true;
-    saveBtn.innerHTML = "<i class='fas fa-spinner fa-spin'></i>";
-
-    try {
-        const res = await submitData({
-            type: '盤點',
-            id: item.id,
-            name: item.name,
-            lot: item.lot,
-            expiry: item.expiry,
-            qty: newQty,
-            minQty: item.min_qty,
-            user: CURRENT_USER_NAME,
-            note: '[首頁手動盤點]'
-        });
-        modifiedScanIndices.delete(index);
-        applyMutationResponse(res);
-        showToast("✨ 盤點數量已更新！", "success");
-        scheduleBackgroundSync();
-    } catch (error) {
-        showAlert('上傳失敗: ' + error.message);
-        const currentSaveBtn = document.getElementById(`inline-save-btn-${index}`);
-        const currentEndBtn = document.getElementById(`inline-end-btn-${index}`);
-        const currentInput = document.getElementById(`inline-qty-${index}`);
-        if (currentSaveBtn) {
-            currentSaveBtn.disabled = false;
-            currentSaveBtn.innerHTML = "<i class='fas fa-check'></i> 儲存";
-        }
-        if (currentEndBtn) currentEndBtn.disabled = false;
-        if (currentInput) currentInput.disabled = false;
-    }
-}
 
 async function toggleHomeScanner() {
     const panel = document.getElementById('homeScannerPanel');
@@ -1239,83 +879,8 @@ async function toggleHomeScanner() {
         isHomeScanningActive = false;
     }
 }
+/* superseded startHomeScanner removed in Commercial v4 cleanup */
 
-async function startHomeScanner() {
-    try {
-        await ensureQrLibraryLoaded();
-    } catch (error) {
-        showToast(error.message, "error");
-        return;
-    }
-
-    if (homeQrCode) {
-        try { if (homeQrCode.isScanning) await homeQrCode.stop(); } catch(e){}
-        try { homeQrCode.clear(); } catch(e){}
-        homeQrCode = null;
-    }
-    homeQrCode = new Html5Qrcode('homeReader');
-    isHomeScanningActive = true;
-    const config = { fps: 15, aspectRatio: 1.0 };
-
-    try {
-        await homeQrCode.start({ facingMode: 'environment' }, config, (decodedText) => {
-            if (!isHomeScanningActive) return;
-            const now = Date.now();
-            if (now - lastScanTime < 1000) return;
-            lastScanTime = now;
-
-            let globalIdx = -1;
-            const matchedById = itemIndexes.byId.get(decodedText) || [];
-            for (const item of matchedById) {
-                const idx = itemIndexes.sourceIndexByBatch.get(getBatchIndexKey(item));
-                if (idx !== undefined && document.getElementById(`inline-row-${idx}`)) {
-                    globalIdx = idx;
-                    break;
-                }
-            }
-
-            if (globalIdx !== -1) {
-                playBeepSound();
-                startInlineStocktake(globalIdx, true);
-                const qtyInput = document.getElementById(`inline-qty-${globalIdx}`);
-                if (!qtyInput) return;
-                qtyInput.value = (parseInt(qtyInput.value) || 0) + 1;
-                const itemName = allItems[globalIdx].name;
-                document.getElementById('homeScanStatus').innerHTML = `<span class="text-green-400 font-bold truncate block w-40 md:w-auto">${itemName}</span><span class="text-xs text-slate-300">累計實盤: </span><span class="text-lg font-bold text-white">${qtyInput.value}</span>`;
-                showToast(`🎯 掃描成功！庫存已 +1`, "success");
-            } else {
-                playErrorSound();
-                showToast(`❌ 無此條碼庫存建檔`, "error");
-            }
-        }, () => {});
-
-        setTimeout(() => {
-            const video = document.querySelector('#homeReader video');
-            if (video && video.srcObject) {
-                const track = video.srcObject.getVideoTracks()[0];
-                const capabilities = track.getCapabilities ? track.getCapabilities() : {};
-                const slider = document.getElementById('home-zoom-slider');
-                if (capabilities.zoom) {
-                    slider.min = capabilities.zoom.min || 1;
-                    slider.max = capabilities.zoom.max || 5;
-                    slider.step = capabilities.zoom.step || 0.1;
-                    slider.value = track.getSettings().zoom || 1;
-                    slider.oninput = async function() {
-                        try { await track.applyConstraints({ advanced: [{ zoom: parseFloat(this.value) }] }); } catch(e) {}
-                    };
-                    slider.disabled = false;
-                    slider.parentElement.style.opacity = '1';
-                } else {
-                    slider.disabled = true;
-                    slider.parentElement.style.opacity = '0.4';
-                }
-            }
-        }, 800);
-    } catch (err) {
-        isHomeScanningActive = false;
-        showToast("相機啟動失敗", "error");
-    }
-}
 
         function decrementInlineQty(index) {
             const qtyInput = document.getElementById(`inline-qty-${index}`);
@@ -1326,56 +891,8 @@ async function startHomeScanner() {
                 showToast(`已修正扣除 -1`, "error");
             }
         }
+/* superseded submitAllHomeScans removed in Commercial v4 cleanup */
 
-async function submitAllHomeScans() {
-    if (!(await ensureLiveInventoryReady())) return;
-    if(modifiedScanIndices.size === 0) { showToast("尚未累計任何項目", "error"); return; }
-    if (!CURRENT_USER_NAME) { showAlert("請先登入！"); return; }
-
-    let confirmMsg = "【掃描盤點確認】\n\n";
-    for (let idx of modifiedScanIndices) {
-        const item = allItems[idx];
-        const newQty = parseInt(document.getElementById(`inline-qty-${idx}`).value) || 0;
-        const oldQty = parseInt(item.qty) || 0;
-        confirmMsg += `[${item.name}]\n原: ${oldQty} ➔ 實盤: ${newQty} (${newQty - oldQty > 0 ? `+${newQty - oldQty}` : newQty - oldQty})\n\n`;
-    }
-    if (!confirm(confirmMsg + "確定儲存以上結果嗎？")) return;
-
-    const btn = document.getElementById('homeScanSaveBtn');
-    const originalHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> 處理中';
-
-    try {
-        const batchItems = [];
-        for (let idx of modifiedScanIndices) {
-            const item = allItems[idx];
-            const newQty = parseInt(document.getElementById(`inline-qty-${idx}`).value);
-            batchItems.push({
-                type: '盤點',
-                id: item.id,
-                name: item.name,
-                lot: item.lot,
-                expiry: item.expiry,
-                qty: newQty,
-                minQty: item.min_qty,
-                user: CURRENT_USER_NAME,
-                note: '[POS 掃描盤點]'
-            });
-        }
-        const res = await submitBatchStocktake(batchItems);
-        modifiedScanIndices.clear();
-        applyMutationResponse(res);
-        showToast("✨ 盤點全部儲存成功！", "success");
-        document.getElementById('homeScanStatus').innerHTML = "<span class='text-green-400 font-bold'><i class='fas fa-check-circle'></i> 上傳完成，可繼續掃描。</span>";
-        scheduleBackgroundSync();
-    } catch(error) {
-        showAlert('部分上傳失敗: ' + error.message);
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalHtml;
-    }
-}
 
 async function submitData(params) {
     return postApi(params);
@@ -1384,79 +901,10 @@ async function submitData(params) {
 async function submitBatchStocktake(items) {
     return postApi({ action: 'batchStocktake', items });
 }
+/* superseded submitScan removed in Commercial v4 cleanup */
 
-async function submitScan() {
-    if (!(await ensureLiveInventoryReady())) return;
-    const btn = document.getElementById('scanSubmitBtn');
-    const qtyStr = document.getElementById('scanQty').value;
-    const qty = parseInt(qtyStr);
-    const name = document.getElementById('scanName').value.trim() || String(scannedData || '').trim();
-    let lot = "", expiry = "", price = 0;
+/* superseded setScanMode removed in Commercial v4 cleanup */
 
-    if (!qtyStr || isNaN(qty) || qty < 0 || !scannedData) {
-        showAlert('請確認輸入正確數量！');
-        return;
-    }
-
-    if (scanMode === 'inbound') {
-        lot = document.getElementById('scanLot').value.trim();
-        expiry = document.getElementById('scanExpiry').value;
-        price = document.getElementById('scanPrice').value;
-        if (!lot && expiry) lot = expiry.replace(/-/g, '');
-    } else {
-        const selected = document.getElementById('scanBatchSelect').value;
-        if (!selected) { showAlert('無可用批次'); return; }
-        const batchData = JSON.parse(selected);
-        lot = batchData.lot;
-        expiry = batchData.expiry;
-    }
-
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 處理中...';
-
-    try {
-        const res = await submitData({
-            type: scanMode === 'inbound' ? '入庫' : '領用',
-            id: scannedData,
-            name,
-            lot,
-            expiry,
-            qty,
-            price: price ? parseFloat(price) : 0,
-            user: CURRENT_USER_NAME,
-            note: document.getElementById('scanNote').value
-        });
-        applyMutationResponse(res);
-        showToast('✅ 資料已成功儲存', 'success');
-        document.getElementById('scanForm').classList.add('hidden');
-        document.getElementById('scanResult').classList.add('hidden');
-        document.getElementById('scanNote').value = '';
-        scheduleBackgroundSync();
-
-        // 寫入已成功就立刻恢復按鈕；相機重啟放到下一個非阻塞流程，不再讓按鈕陪著轉。
-        btn.disabled = false;
-        btn.innerText = '確認送出';
-        startScanner().catch(() => {});
-        return;
-    } catch (error) {
-        showAlert('送出失敗：' + error.message);
-    } finally {
-        btn.disabled = false;
-        btn.innerText = '確認送出';
-    }
-}
-
-        function setScanMode(mode) {
-            scanMode = mode;
-            document.getElementById('scanInbound').className = `flex-1 py-2.5 rounded-lg transition text-sm ${mode === 'inbound' ? 'bg-blue-600 text-white font-bold shadow-sm' : 'bg-transparent text-gray-500 hover:text-gray-700 font-bold'}`;
-            document.getElementById('scanOutbound').className = `flex-1 py-2.5 rounded-lg transition text-sm ${mode === 'outbound' ? 'bg-blue-600 text-white font-bold shadow-sm' : 'bg-transparent text-gray-500 hover:text-gray-700 font-bold'}`;
-            document.getElementById('scanFormTitle').innerHTML = `<i class="fas fa-clipboard-list mr-1.5"></i> 填寫表單明細 (${mode === 'inbound' ? '入庫建檔' : '領用扣帳'})`;
-            if(mode === 'inbound') {
-                document.getElementById('scanManualDetails').classList.remove('hidden'); document.getElementById('scanPriceContainer').classList.remove('hidden'); document.getElementById('scanBatchContainer').classList.add('hidden'); document.getElementById('scanName').readOnly = false; document.getElementById('scanName').classList.remove('bg-gray-100');
-            } else {
-                document.getElementById('scanManualDetails').classList.add('hidden'); document.getElementById('scanPriceContainer').classList.add('hidden'); document.getElementById('scanBatchContainer').classList.remove('hidden'); document.getElementById('scanName').readOnly = true; document.getElementById('scanName').classList.add('bg-gray-100');
-            }
-        }
 
 function updateCategoryFilter() {
     const el = document.getElementById('categoryFilter');
@@ -1471,45 +919,23 @@ function updateCategoryFilter() {
             const el = document.getElementById('existing-ids-list'); if (!el) return;
             el.innerHTML = [...new Set(allItems.map(i => i.id).filter(Boolean))].map(id => `<option value="${id}">`).join('');
         }
+/* superseded populateBatchSelect removed in Commercial v4 cleanup */
 
-        function updateManualOutboundOptions() {
-            const select = document.getElementById('manualOutboundNameSelect');
-            if (!select) return;
-            const previous = select.value;
-            const available = new Map();
-            allItems.forEach(item => {
-                const qty = parseInt(item.qty) || 0;
-                if (qty <= 0) return;
-                if (!available.has(item.id)) available.set(item.id, { id: item.id, name: item.name || item.id, qty: 0 });
-                available.get(item.id).qty += qty;
-            });
-            const rows = [...available.values()].sort((a, b) => a.name.localeCompare(b.name, 'zh-TW') || a.id.localeCompare(b.id));
-            select.innerHTML = '<option value="">請選擇品項</option>' + rows.map(item => `<option value="${escapeManagementHtml(item.id)}">${escapeManagementHtml(item.name)}（ID: ${escapeManagementHtml(item.id)}｜庫存: ${item.qty}）</option>`).join('');
-            if (previous && available.has(previous)) select.value = previous;
+
+        function toggleScannerFefo() {
+            const enabled = document.getElementById('scanUseFefo')?.checked === true;
+            const select = document.getElementById('scanBatchSelect');
+            if (select) select.disabled = enabled;
+            const hint = document.getElementById('scanFefoHint');
+            if (hint) hint.textContent = enabled ? 'FEFO 已啟用：系統會由最早到期且有庫存的批次開始扣帳，必要時自動跨批次。' : 'FEFO 已關閉：請手動指定領用批次。';
         }
 
-        function selectManualOutboundItem() {
-            const id = document.getElementById('manualOutboundNameSelect').value;
-            const idEl = document.getElementById('manualId');
-            const nameEl = document.getElementById('manualName');
-            idEl.value = id;
-            const matches = itemIndexes.byId.get(id) || [];
-            nameEl.value = matches[0]?.name || '';
-            if (id) populateBatchSelect(id, 'manualBatchSelect', 'outbound');
-            else document.getElementById('manualBatchSelect').innerHTML = '';
-        }
-
-        function populateBatchSelect(id, selectElementId, mode) {
-            const select = document.getElementById(selectElementId); select.innerHTML = '';
-            let batches = (itemIndexes.byId.get(id) || []).filter(i => parseInt(i.qty) > 0).slice();
-            if (batches.length === 0) { select.innerHTML = '<option value="">無歷史可用庫存</option>'; return; }
-            batches.sort((a, b) => (a.expiry > b.expiry ? 1 : -1));
-            batches.forEach((b, index) => {
-                const option = document.createElement('option');
-                option.value = JSON.stringify({lot: b.lot, expiry: b.expiry, minQty: b.min_qty, oldQty: b.qty});
-                option.textContent = `${index === 0 ? '⭐ 最快到期 | ' : ''}效期: ${formatToYYYYMMDD(b.expiry)} | 批號: ${cleanLotString(b.lot)} (存量: ${b.qty})`;
-                select.appendChild(option);
-            });
+        function toggleManualFefo() {
+            const enabled = document.getElementById('manualUseFefo')?.checked === true;
+            const select = document.getElementById('manualBatchSelect');
+            if (select) select.disabled = enabled;
+            const hint = document.getElementById('manualFefoHint');
+            if (hint) hint.textContent = enabled ? 'FEFO 已啟用：不用指定批次，系統會自動從最早到期批次開始扣帳。' : 'FEFO 已關閉：請手動指定領用批次。';
         }
 
 async function startScanner() {
@@ -1600,204 +1026,16 @@ async function startScanner() {
 }
 
         async function resumeScanner() { document.getElementById('scanForm').classList.add('hidden'); document.getElementById('scanResult').classList.add('hidden'); await startScanner(); }
+/* superseded toggleManualMode removed in Commercial v4 cleanup */
 
-        function toggleManualMode() {
-            const mode = document.getElementById('manualType').value;
-            const nameEl = document.getElementById('manualName');
-            const idEl = document.getElementById('manualId');
-            const nameInputContainer = document.getElementById('manualNameInputContainer');
-            const outboundNameContainer = document.getElementById('manualOutboundNameContainer');
-            if(mode === '入庫') {
-                document.getElementById('manualDetailsContainer').classList.remove('hidden');
-                document.getElementById('manualPriceContainer').classList.remove('hidden');
-                document.getElementById('manualBatchContainer').classList.add('hidden');
-                nameEl.readOnly = false;
-                nameEl.classList.remove('bg-gray-100');
-                idEl.readOnly = false;
-                idEl.classList.remove('bg-gray-100', 'text-gray-500');
-                nameInputContainer.classList.remove('hidden');
-                outboundNameContainer.classList.add('hidden');
-                // 入庫模式不自動顯示 ID 對應品名；使用者可自行輸入，空白送出時再以 ID 作為品名。
-                nameEl.value = '';
-            } else {
-                document.getElementById('manualDetailsContainer').classList.add('hidden');
-                document.getElementById('manualPriceContainer').classList.add('hidden');
-                document.getElementById('manualBatchContainer').classList.remove('hidden');
-                nameEl.readOnly = true;
-                nameEl.classList.add('bg-gray-100');
-                idEl.readOnly = true;
-                idEl.classList.add('bg-gray-100', 'text-gray-500');
-                nameInputContainer.classList.add('hidden');
-                outboundNameContainer.classList.remove('hidden');
-                updateManualOutboundOptions();
-                selectManualOutboundItem();
-            }
-            autoFillManual(); 
-        }
+/* superseded autoFillManual removed in Commercial v4 cleanup */
 
-        function autoFillManual() {
-            const idVal = document.getElementById('manualId').value;
-            const mode = document.getElementById('manualType').value;
-            const itemMatches = itemIndexes.byId.get(idVal) || [];
-            const nameEl = document.getElementById('manualName');
+/* superseded submitManual removed in Commercial v4 cleanup */
 
-            if (mode === '入庫') {
-                // 僅查找既有價格，不同步填入品名，避免使用者輸入 ID 時品名欄跟著變動。
-                document.getElementById('manualPrice').value = itemMatches.length > 0 ? (itemMatches[0].price || '') : '';
-                document.getElementById('manualBatchSelect').innerHTML = '';
-                return;
-            }
+/* superseded filterItems removed in Commercial v4 cleanup */
 
-            // 領用模式只能從「目前有庫存」的品項下拉選單選取，ID 由系統鎖定帶入。
-            if (itemMatches.length > 0) {
-                nameEl.value = itemMatches[0].name || idVal;
-                populateBatchSelect(idVal, 'manualBatchSelect', 'outbound');
-            } else {
-                nameEl.value = '';
-                document.getElementById('manualBatchSelect').innerHTML = '';
-            }
-        }
+/* superseded generateReport removed in Commercial v4 cleanup */
 
-async function submitManual() {
-    if (!(await ensureLiveInventoryReady())) return;
-    const btn = document.getElementById('manualSubmitBtn');
-    const id = document.getElementById('manualId').value.trim();
-    const type = document.getElementById('manualType').value;
-    const name = document.getElementById('manualName').value.trim() || id;
-    const qtyStr = document.getElementById('manualQty').value;
-    const qty = parseInt(qtyStr);
-    let lot = "", expiry = "", price = 0;
-
-    if (!id || !qtyStr || isNaN(qty) || qty < 0) {
-        showAlert('請確實填寫 ID 和正確數量！');
-        return;
-    }
-
-    if (type === '入庫') {
-        lot = document.getElementById('manualLot').value.trim();
-        expiry = document.getElementById('manualExpiry').value;
-        price = document.getElementById('manualPrice').value;
-        if (!lot && expiry) lot = expiry.replace(/-/g, '');
-    } else {
-        const batchSelect = document.getElementById('manualBatchSelect').value;
-        if(!batchSelect) { showAlert("無可用批次"); return; }
-        const batchData = JSON.parse(batchSelect);
-        lot = batchData.lot;
-        expiry = batchData.expiry;
-    }
-
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 處理中...';
-
-    try {
-        const res = await submitData({
-            type,
-            id,
-            name,
-            lot,
-            expiry,
-            qty,
-            price: price ? parseFloat(price) : 0,
-            user: CURRENT_USER_NAME,
-            note: document.getElementById('manualNote').value
-        });
-        applyMutationResponse(res);
-        showToast('✅ 手動單據已成功儲存', "success");
-
-        document.getElementById('manualId').value = '';
-        document.getElementById('manualName').value = '';
-        document.getElementById('manualLot').value = '';
-        document.getElementById('manualExpiry').value = '';
-        document.getElementById('manualQty').value = '';
-        document.getElementById('manualPrice').value = '';
-        document.getElementById('manualNote').value = '';
-        document.getElementById('manualBatchSelect').innerHTML = '';
-        document.getElementById('manualOutboundNameSelect').value = '';
-        scheduleBackgroundSync();
-    } catch (error) {
-        showAlert('送出失敗：' + error.message);
-    } finally {
-        btn.disabled = false;
-        btn.innerText = '送出作業';
-    }
-}
-
-function filterItems() {
-    const search = document.getElementById('searchInput').value.toLowerCase().trim();
-    const category = document.getElementById('categoryFilter').value;
-    const status = document.getElementById('statusFilter').value;
-    const lowStockOnly = document.getElementById('lowStockOnly').checked;
-    const showHiddenZeroItems = document.getElementById('showHiddenZeroItems').checked;
-    const today = new Date().toISOString().split('T')[0];
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-    filteredItems = allItems.filter(item => {
-        const matchSearch = !search ||
-            item.name.toLowerCase().includes(search) ||
-            item.id.toLowerCase().includes(search) ||
-            item.lot.toLowerCase().includes(search);
-        const matchCategory = !category || item.category === category;
-        let matchStatus = true;
-        let matchLowStock = true;
-        const matchHidden = showHiddenZeroItems || item.isHidden !== true;
-
-        if (status === 'today' && !(item.last_stocktake >= today)) matchStatus = false;
-        if (status === 'week' && !(item.last_stocktake >= weekAgo && item.last_stocktake < today)) matchStatus = false;
-        if (status === 'overdue' && item.last_stocktake >= weekAgo) matchStatus = false;
-
-        if (lowStockOnly) {
-            const itemTotal = itemIndexes.totalsByName.get(item.name)?.qty || 0;
-            if (itemTotal > (item.min_qty || 0)) matchLowStock = false;
-        }
-        return matchSearch && matchCategory && matchStatus && matchLowStock && matchHidden;
-    });
-
-    renderItems(filteredItems);
-}
-
-async function toggleZeroItemHidden(encodedId, isHidden) {
-    if (!(await ensureLiveInventoryReady())) return;
-    const id = decodeURIComponent(encodedId);
-    const verb = isHidden ? '隱藏' : '重新顯示';
-    if (!confirm(`確定要${verb}這張零庫存卡片嗎？`)) return;
-    try {
-        const res = await postApi({ action: 'setZeroItemHidden', id, isHidden });
-        applyMutationResponse(res);
-        if (!isHidden) document.getElementById('showHiddenZeroItems').checked = true;
-        filterItems();
-        showToast(`✅ ${res.message || `${verb}完成`}`, 'success');
-    } catch (error) {
-        showAlert(`${verb}失敗：${error.message}`);
-    }
-}
-
-        function generateReport() {
-            const container = document.getElementById('reportContent');
-            const formatNum = (d) => { return parseInt(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`); };
-            const todayNum = formatNum(new Date()); const oneMonthLater = new Date(); oneMonthLater.setMonth(oneMonthLater.getMonth() + 1); const oneMonthLaterNum = formatNum(oneMonthLater);
-            const expiringSoon = allItems.filter(i => {
-                if (!i.expiry || (parseInt(i.qty) || 0) <= 0) return false; const itemExpiryNum = parseInt(formatToYYYYMMDD(i.expiry)); if (isNaN(itemExpiryNum)) return false; return itemExpiryNum >= todayNum && itemExpiryNum <= oneMonthLaterNum;
-            });
-            const totalsMap = new Map();
-            allItems.forEach(i => { if(!totalsMap.has(i.name)) totalsMap.set(i.name, { qty: 0, min: i.min_qty || 0 }); totalsMap.get(i.name).qty += (parseInt(i.qty) || 0); });
-            let lowStockHtml = '';
-            totalsMap.forEach((v, name) => { if(v.qty <= v.min) lowStockHtml += `<li class="text-sm font-semibold text-red-700 py-1 border-b border-red-100 last:border-0 flex justify-between"><span>${name}</span> <span class="bg-red-100 px-2 rounded-full text-xs self-center">剩餘 ${v.qty} (門檻 ${v.min})</span></li>`; });
-
-            container.innerHTML = `
-                <div class="p-4 md:p-5 bg-amber-50 rounded-xl border border-amber-200 shadow-sm">
-                    <h4 class="font-bold text-amber-800 mb-3 text-sm md:text-base"><i class="fas fa-hourglass-half mr-1"></i> 效期預警（未來一個月內到期）</h4>
-                    <ul class="space-y-2">
-                    ${expiringSoon.length > 0 ? expiringSoon.map(i => `<li class="text-xs md:text-sm text-amber-900 bg-white/50 p-2 rounded border border-amber-100"><span class="font-bold">${i.name}</span> <br class="md:hidden"><span class="text-gray-500">(批號: <span class="font-mono">${cleanLotString(i.lot)}</span>)</span><br>剩餘 ${i.qty} 個，將於 <span class="text-red-600 font-bold">${formatToYYYYMMDD(i.expiry)}</span> 到期</li>`).join('') : '<li class="text-sm text-gray-500 flex items-center gap-1"><i class="fas fa-check-circle text-green-500"></i> 目前無即將過期耗材。</li>'}
-                    </ul>
-                </div>
-                <div class="p-4 md:p-5 bg-red-50 rounded-xl border border-red-200 mt-4 shadow-sm">
-                    <h4 class="font-bold text-red-800 mb-3 text-sm md:text-base"><i class="fas fa-arrow-down mr-1"></i> 低於安全庫存警示</h4>
-                    <ul class="space-y-1">
-                    ${lowStockHtml ? lowStockHtml : '<li class="text-sm text-gray-500 flex items-center gap-1"><i class="fas fa-check-circle text-green-500"></i> 全品項皆高於安全水準。</li>'}
-                    </ul>
-                </div>
-            `;
-        }
 
         async function triggerManualReport() {
             const email = document.getElementById('reportEmail').value.trim();
@@ -1810,69 +1048,13 @@ async function toggleZeroItemHidden(encodedId, isHidden) {
         }
 
         async function saveAutoSchedule() {
-            if (CURRENT_USER_ROLE !== 'admin') { showAlert("只有管理員可以設定自動寄送報表"); return; }
             const email = document.getElementById('reportEmail').value.trim(); const day = document.getElementById('autoReportDay').value;
             if (!email || !email.includes('@')) { showAlert("請輸入正確信箱！"); return; } if (!CURRENT_USER_NAME) { showAlert("請先登入！"); return; }
             const btn = document.getElementById('btnAutoSchedule'); const originalText = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 儲存中...';
             try {
-                const result = await postApi({ action: 'setAutoSchedule', email: email, day: day });
-                renderAutoScheduleStatus(result);
-                showToast(`✅ ${email} 已訂閱`, "success");
+                await postApi({ action: 'setAutoSchedule', email: email, day: day });
+                showToast(`✅ 每月 ${day} 號自動寄出！`, "success");
             } catch(err) { showAlert("設定失敗：" + err.message); } finally { btn.disabled = false; btn.innerHTML = originalText; }
-        }
-
-        function renderAutoScheduleStatus(schedule = {}) {
-            const status = document.getElementById('autoReportSubscriptionStatus');
-            const cancelButton = document.getElementById('btnCancelAutoSchedule');
-            if (!status || !cancelButton) return;
-            const subscribed = schedule.subscribed === true && schedule.email;
-            if (subscribed) {
-                const day = Number.parseInt(schedule.day, 10);
-                status.textContent = `${schedule.email} 已訂閱${day ? `，每月 ${day} 日自動寄送` : ''}`;
-                status.className = 'text-xs font-bold text-emerald-700 bg-white border border-emerald-200 rounded-lg px-3 py-2 mt-2 break-words';
-                document.getElementById('reportEmail').value = schedule.email;
-                if (day) {
-                    const select = document.getElementById('autoReportDay');
-                    if (![...select.options].some(option => Number(option.value) === day)) select.add(new Option(String(day), String(day)));
-                    select.value = String(day);
-                }
-                cancelButton.classList.remove('hidden');
-            } else {
-                status.textContent = '尚未訂閱自動報表';
-                status.className = 'text-xs font-bold text-slate-600 bg-white border border-emerald-100 rounded-lg px-3 py-2 mt-2';
-                cancelButton.classList.add('hidden');
-            }
-        }
-
-        async function loadAutoSchedule() {
-            if (CURRENT_USER_ROLE !== 'admin') return;
-            const status = document.getElementById('autoReportSubscriptionStatus');
-            if (status) status.textContent = '讀取訂閱狀態中…';
-            try {
-                renderAutoScheduleStatus(await postApi({ action: 'getAutoSchedule' }));
-            } catch (err) {
-                if (status) status.textContent = `讀取失敗：${err.message}`;
-            }
-        }
-
-        async function cancelAutoSchedule() {
-            if (CURRENT_USER_ROLE !== 'admin') { showAlert("只有管理員可以取消自動寄送報表"); return; }
-            if (!window.confirm('確定要取消自動報表訂閱嗎？')) return;
-            const btn = document.getElementById('btnCancelAutoSchedule');
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 取消中...';
-            try {
-                const result = await postApi({ action: 'cancelAutoSchedule' });
-                document.getElementById('reportEmail').value = '';
-                renderAutoScheduleStatus(result);
-                showToast('已取消自動報表訂閱', 'success');
-            } catch (err) {
-                showAlert('取消訂閱失敗：' + err.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            }
         }
 
         // ==========================================
@@ -1934,307 +1116,314 @@ async function saveThreshold(id, name) {
         }
     }
 }
+/* superseded updateRoleUi removed in Commercial v4 cleanup */
 
-function applyUserRoleUi() {
-    const button = document.getElementById('userManagementButton');
-    const adminNavButton = document.getElementById('adminNavButton');
-    const navGrid = document.getElementById('bottomNavGrid');
-    const autoReportPanel = document.getElementById('autoReportAdminPanel');
-    const autoReportNotice = document.getElementById('autoReportAdminOnlyNotice');
-    const isAdmin = CURRENT_USER_ROLE === 'admin';
-    if (button) button.classList.toggle('hidden', !isAdmin);
-    if (adminNavButton) adminNavButton.classList.toggle('hidden', !isAdmin);
-    if (autoReportPanel) {
-        autoReportPanel.classList.toggle('hidden', !isAdmin);
-        autoReportPanel.classList.toggle('flex', isAdmin);
-    }
-    if (autoReportNotice) autoReportNotice.classList.toggle('hidden', isAdmin);
-    if (navGrid) {
-        navGrid.classList.toggle('grid-cols-6', isAdmin);
-        navGrid.classList.toggle('grid-cols-5', !isAdmin);
-    }
-    const adminView = document.getElementById('adminView');
-    if (!isAdmin && adminView && !adminView.classList.contains('hidden')) {
-        adminView.classList.add('hidden');
-        document.getElementById('dashboardView').classList.remove('hidden');
-        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active', 'text-blue-600', 'bg-blue-50'));
-        document.querySelector('.nav-item')?.classList.add('active', 'text-blue-600', 'bg-blue-50');
+
+function openManualAction(type) {
+    switchTab('manual');
+    const typeEl = document.getElementById('manualType');
+    if (typeEl) typeEl.value = type;
+    toggleManualMode();
+    setTimeout(() => document.getElementById('manualId')?.focus(), 60);
+}
+/* superseded applyDashboardMetricFilter removed in Commercial v4 cleanup */
+
+
+async function getApiResource(resource, params={}) {
+    if (!CURRENT_SESSION_TOKEN) throw new Error('登入已失效，請重新登入');
+    const url = new URL(API_URL);
+    url.searchParams.set('resource', resource);
+    Object.entries(params).forEach(([k,v]) => { if(v!==undefined && v!==null && v!=='') url.searchParams.set(k, v); });
+    const response = await resilientFetch(url.toString(), { cache:'no-store', headers:{Authorization:`Bearer ${CURRENT_SESSION_TOKEN}`} }, { timeoutMs:API_GET_TIMEOUT_MS, retries:API_GET_MAX_RETRIES });
+    return parseApiJson(response);
+}
+/* superseded startStocktakeWorkflow removed in Commercial v4 cleanup */
+
+
+async function refreshStocktakeWorkflow() {
+    try {
+        const res = await getApiResource('stocktake');
+        currentStocktakeSession = res.session || null;
+        renderStocktakeSession();
+    } catch(e) {
+        if (!currentStocktakeSession) document.getElementById('stocktakeSessionBadge').textContent='讀取失敗';
     }
 }
+/* superseded renderStocktakeSession removed in Commercial v4 cleanup */
 
-function escapeManagementHtml(value) {
-    return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+/* superseded renderStocktakeChecklist removed in Commercial v4 cleanup */
+
+
+function selectStocktakeByCode(code) {
+    const id=String(code||'').trim(); if(!id||!currentStocktakeSession)return;
+    const pending=(currentStocktakeSession.lines||[]).filter(x=>x.status==='pending'&&String(x.id)===id);
+    if(!pending.length){playErrorSound();showToast('此品項不在待盤點清單，或已完成盤點','error');return;}
+    const sel=document.getElementById('stocktakeBatchSelect');
+    sel.innerHTML=pending.map(x=>`<option value="${x.batch_id}">${escapeHtmlClient(formatToYYYYMMDD(x.expiry))}｜${escapeHtmlClient(x.lot||'無批號')}</option>`).join('');
+    selectStocktakeBatch(pending[0].batch_id); playBeepSound(); document.getElementById('stocktakeCodeInput').value='';
+}
+/* superseded selectStocktakeBatch removed in Commercial v4 cleanup */
+
+
+function closeStocktakeCountPanel(){selectedStocktakeLine=null;document.getElementById('stocktakeCountPanel')?.classList.add('hidden');}
+function adjustStocktakeQty(delta){const el=document.getElementById('stocktakeQty');const cur=Math.max(0,parseInt(el.value)||0);el.value=Math.max(0,cur+delta);updateStocktakeReasonVisibility();}
+function updateStocktakeReasonVisibility(){if(!selectedStocktakeLine||!currentStocktakeSession)return;const wrap=document.getElementById('stocktakeReasonWrap');if(currentStocktakeSession.blind_mode){return;}const q=parseInt(document.getElementById('stocktakeQty').value);const diff=Number.isFinite(q)&&q!==Number(selectedStocktakeLine.system_qty);wrap.classList.toggle('hidden',!diff);}
+/* superseded submitStocktakeCount removed in Commercial v4 cleanup */
+
+
+async function completeStocktakeWorkflow(force=false) {
+    if(!currentStocktakeSession)return;
+    try {
+        const res=await postApi({action:'completeStocktakeSession',sessionId:currentStocktakeSession.session_id,force});
+        if(res.requiresConfirmation && !force){ if(confirm(`${res.pending} 筆尚未盤點，確定仍要結束本次盤點嗎？`)) return completeStocktakeWorkflow(true); return; }
+        currentStocktakeSession=null; closeStocktakeCountPanel(); renderStocktakeSession(); showToast('✅ 本次盤點已完成','success'); scheduleBackgroundSync(100);
+    } catch(e){showAlert('完成盤點失敗：'+e.message);}
 }
 
-async function openUserManagement() {
-    if (CURRENT_USER_ROLE !== 'admin') {
-        showAlert('只有管理員可以使用此功能');
-        return;
-    }
-    const modal = document.getElementById('userManagementModal');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    syncModalPageLock();
-    await loadManagedUsers();
+async function cancelStocktakeWorkflow() {
+    if(!currentStocktakeSession||!confirm('確定取消本次盤點工作階段？已完成的盤點異動不會回復。'))return;
+    try{await postApi({action:'cancelStocktakeSession',sessionId:currentStocktakeSession.session_id});currentStocktakeSession=null;closeStocktakeCountPanel();renderStocktakeSession();showToast('盤點工作階段已取消','success');}catch(e){showAlert('取消失敗：'+e.message);}
 }
 
-function syncModalPageLock() {
-    const modalIds = ['userManagementModal', 'resetUserPasswordModal'];
-    const hasOpenModal = modalIds.some(id => {
-        const modal = document.getElementById(id);
-        return modal && !modal.classList.contains('hidden');
+async function toggleStocktakeScanner() {
+    const wrap=document.getElementById('stocktakeReaderWrap'),btn=document.getElementById('stocktakeScannerBtn');
+    if(stocktakeQrActive && stocktakeQrCode){try{await stocktakeQrCode.stop()}catch{}try{stocktakeQrCode.clear()}catch{}stocktakeQrCode=null;stocktakeQrActive=false;wrap.classList.add('hidden');btn.textContent='開啟相機';return;}
+    try{await ensureQrLibraryLoaded();wrap.classList.remove('hidden');stocktakeQrCode=new Html5Qrcode('stocktakeReader');stocktakeQrActive=true;btn.textContent='關閉相機';await stocktakeQrCode.start({facingMode:'environment'},{fps:12,aspectRatio:1.3},text=>{const now=Date.now();if(now-lastScanTime<1200)return;lastScanTime=now;selectStocktakeByCode(text)});}catch(e){stocktakeQrActive=false;stocktakeQrCode=null;wrap.classList.add('hidden');btn.textContent='開啟相機';showAlert('相機啟動失敗：'+e.message);}
+}
+/* superseded renderAdminInventory removed in Commercial v4 cleanup */
+
+/* superseded saveAdminItem removed in Commercial v4 cleanup */
+
+/* superseded saveAdminBatch removed in Commercial v4 cleanup */
+
+/* superseded loadAdminUsers removed in Commercial v4 cleanup */
+
+/* superseded renderAdminUsers removed in Commercial v4 cleanup */
+
+/* superseded createAdminUser removed in Commercial v4 cleanup */
+
+async function toggleAdminUser(userId,active){if(!confirm(`確定${active?'啟用':'停用'}此帳號？`))return;try{await postApi({action:'setUserActive',userId,isActive:active});loadAdminUsers()}catch(e){showAlert(e.message)}}
+async function resetAdminPassword(userId,account){const password=prompt(`請輸入 ${account} 的新密碼（至少 8 碼）`);if(!password)return;try{await postApi({action:'resetUserPassword',userId,password});showToast('✅ 密碼已重設','success')}catch(e){showAlert(e.message)}}
+/* superseded switchTab removed in Commercial v4 cleanup */
+
+
+// ============================================================
+// Arenastone Commercial v4 frontend overrides
+// ============================================================
+var CURRENT_CAPABILITIES = { role:'operator', roleLabel:'一般操作員', canOperate:true, canManageInventory:false, canSystemAdmin:false, canViewCost:false };
+var allLocations = [];
+var selectedDashboardLocationId = 0;
+var currentAnalytics = null;
+var currentAnomalies = null;
+var pwaInstallPrompt = null;
+var barcodeLibraryPromise = null;
+const BARCODE_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';
+
+function roleLevelV4(role){ return ({viewer:0,operator:1,inventory_manager:2,system_admin:3})[String(role||'')] ?? (role==='admin'?3:1); }
+function capabilityFallback(role){
+    const lv=roleLevelV4(role);
+    return { role: role==='admin'?'system_admin':(role||'operator'), roleLabel: lv===3?'系統管理員':lv===2?'庫存管理員':lv===1?'一般操作員':'唯讀', canOperate:lv>=1, canManageInventory:lv>=2, canSystemAdmin:lv>=3, canViewCost:lv>=2 };
+}
+function applyCapabilities(caps){ CURRENT_CAPABILITIES={...capabilityFallback(CURRENT_USER_ROLE),...(caps||{})}; CURRENT_USER_ROLE=CURRENT_CAPABILITIES.role||CURRENT_USER_ROLE; updateRoleUi(); }
+function canOperateUi(){return !!CURRENT_CAPABILITIES.canOperate}
+function canManageInventoryUi(){return !!CURRENT_CAPABILITIES.canManageInventory}
+function canSystemAdminUi(){return !!CURRENT_CAPABILITIES.canSystemAdmin}
+function canViewCostUi(){return !!CURRENT_CAPABILITIES.canViewCost}
+
+function normalizeInventoryItem(item) {
+    const id=String(item?.id??'').trim(), name=String(item?.name??'').trim()||id;
+    const rawPrice=item?.price;
+    return {
+        batch_id:parseInt(item?.batch_id)||0,id,name,category:String(item?.category??''),lot:String(item?.lot??''),expiry:String(item?.expiry??''),qty:parseInt(item?.qty)||0,
+        min_qty:parseInt(item?.min_qty)||0,target_qty:parseInt(item?.target_qty)||0,warning_days:parseInt(item?.warning_days)||30,lead_time_days:parseInt(item?.lead_time_days)||7,
+        price:(rawPrice===null||rawPrice===undefined||rawPrice==='')?null:(parseFloat(rawPrice)||0),note:String(item?.note??''),batch_note:String(item?.batch_note??''),location_note:String(item?.location_note??''),
+        last_stocktake:String(item?.last_stocktake??''),location_id:parseInt(item?.location_id)||0,location_code:String(item?.location_code??''),location_name:String(item?.location_name??''),
+        is_active:item?.is_active!==false&&Number(item?.is_active)!==0,expired:item?.expired===true||item?.expired===1
+    };
+}
+function getBatchIndexKey(item){return `B${Number(item?.batch_id)||0}|||L${Number(item?.location_id)||0}`;}
+function rebuildItemIndexes(){
+    itemIndexes.byId.clear(); itemIndexes.totalsById.clear(); itemIndexes.totalsByName.clear(); itemIndexes.sourceIndexByBatch.clear();
+    allItems.forEach((item,index)=>{
+        if(!itemIndexes.byId.has(item.id))itemIndexes.byId.set(item.id,[]); itemIndexes.byId.get(item.id).push(item);
+        if(!itemIndexes.totalsById.has(item.id))itemIndexes.totalsById.set(item.id,{id:item.id,name:item.name,qty:0,min:item.min_qty||0});
+        const t=itemIndexes.totalsById.get(item.id); t.qty+=Number(item.qty)||0;t.min=Number(item.min_qty)||0;t.name=item.name||item.id;
+        if(!itemIndexes.totalsByName.has(item.name))itemIndexes.totalsByName.set(item.name,{qty:0,min:item.min_qty||0});itemIndexes.totalsByName.get(item.name).qty+=Number(item.qty)||0;
+        itemIndexes.sourceIndexByBatch.set(getBatchIndexKey(item),index);
     });
-    document.body.classList.toggle('modal-page-locked', hasOpenModal);
+}
+function scopedInventoryItems(){return selectedDashboardLocationId?allItems.filter(i=>Number(i.location_id)===Number(selectedDashboardLocationId)):allItems;}
+function getSelectedLocationId(id){const el=document.getElementById(id);return Number(el?.value||0);}
+function activeLocationsOnly(){return (allLocations||[]).filter(x=>Number(x.is_active)!==0);}
+function locationOptionsHtml(includeAll=false){return `${includeAll?'<option value="0">全部儲位</option>':''}${activeLocationsOnly().map(l=>`<option value="${l.location_id}">${escapeHtmlClient(l.name)}${l.code?` (${escapeHtmlClient(l.code)})`:''}</option>`).join('')}`;}
+function populateLocationSelectors(){
+    const ids=[['dashboardLocationFilter',true],['scanLocation',false],['manualLocation',false],['stocktakeLocation',false]];
+    for(const [id,all] of ids){const el=document.getElementById(id);if(!el)continue;const prev=el.value;el.innerHTML=locationOptionsHtml(all);if(prev&&[...el.options].some(o=>o.value===prev))el.value=prev;else if(all)el.value=String(selectedDashboardLocationId||0);}
+    const dashboard=document.getElementById('dashboardLocationFilter');if(dashboard)dashboard.value=String(selectedDashboardLocationId||0);
+}
+function setDashboardLocationFilter(){selectedDashboardLocationId=getSelectedLocationId('dashboardLocationFilter');filterItems();updateDashboard();loadAnomalyCenter();loadAnalyticsSummary();}
+function refreshScannerLocationContext(){if(scanMode==='outbound'&&scannedData)populateBatchSelect(scannedData,'scanBatchSelect','outbound');}
+function refreshManualLocationContext(){autoFillManual();}
+
+function applyInventoryData(data,silentMode=false,options={}){
+    allItems=(data.items||[]).map(normalizeInventoryItem);
+    if(Array.isArray(data.locations))allLocations=data.locations.map(x=>({...x,location_id:Number(x.location_id),is_active:Number(x.is_active)!==0}));
+    if(data.capabilities)applyCapabilities(data.capabilities);
+    populateLocationSelectors(); rebuildItemIndexes(); updateDashboard(); updateCategoryFilter(); updateManualIdList();
+    if(!document.getElementById('dashboardView').classList.contains('hidden'))filterItems();
+    if(!document.getElementById('thresholdView').classList.contains('hidden'))renderThresholds();
+    if(!document.getElementById('reportView').classList.contains('hidden'))generateReport();
+    if(options.persistCache!==false)saveInventoryCache();
+    if(hasLiveInventory||silentMode){loadAnomalyCenter();loadAnalyticsSummary();}
+}
+function refreshCurrentViews(){rebuildItemIndexes();updateDashboard();updateCategoryFilter();updateManualIdList();populateLocationSelectors();if(!document.getElementById('dashboardView').classList.contains('hidden'))filterItems();if(!document.getElementById('thresholdView').classList.contains('hidden'))renderThresholds();if(!document.getElementById('reportView').classList.contains('hidden'))generateReport();scheduleInventoryCacheSave();}
+
+function updateNetworkBadge(state){
+    const el=document.getElementById('networkStatus');if(!el)return;
+    const online=navigator.onLine!==false;
+    let cls='network-badge ',icon='fa-wifi',text='線上';
+    if(!online){cls+='network-offline';icon='fa-plug-circle-xmark';text='離線';}
+    else if(state==='syncing'){cls+='network-syncing';icon='fa-rotate fa-spin';text='同步';}
+    else if(state==='cached'||state==='error'){cls+='network-warning';icon='fa-triangle-exclamation';text=state==='cached'?'暫存':'異常';}
+    else cls+='network-online';
+    el.className=cls;el.innerHTML=`<i class="fas ${icon}"></i><span class="network-label">${text}</span>`;
+}
+function setSyncState(state){
+    const tag=document.getElementById('loading-tag');updateNetworkBadge(state);if(!tag)return;if(syncStateHideTimer){clearTimeout(syncStateHideTimer);syncStateHideTimer=null;}
+    const map={syncing:['text-blue-600 text-xs animate-pulse font-bold bg-blue-50 px-2 py-1 rounded border border-blue-100','<i class="fas fa-sync-alt fa-spin mr-1"></i>同步中'],cached:['text-amber-700 text-xs font-bold bg-amber-50 px-2 py-1 rounded border border-amber-200','<i class="fas fa-database mr-1"></i>暫存資料'],error:['text-red-600 text-xs font-bold bg-red-50 px-2 py-1 rounded border border-red-200','<i class="fas fa-exclamation-circle mr-1"></i>同步失敗'],synced:['text-green-700 text-xs font-bold bg-green-50 px-2 py-1 rounded border border-green-200','<i class="fas fa-check-circle mr-1"></i>已同步']};
+    if(!map[state]){tag.classList.add('hidden');return;}tag.className=map[state][0];tag.innerHTML=map[state][1];tag.classList.remove('hidden');if(state==='synced')syncStateHideTimer=setTimeout(()=>tag.classList.add('hidden'),1200);
+}
+/* superseded updateRoleUi removed in Commercial v4 cleanup */
+
+async function handlePortalLogin(){
+    const acc=document.getElementById('loginAccount').value.trim(),pwd=document.getElementById('loginPassword').value.trim(),btn=document.getElementById('loginBtn');if(!acc||!pwd){showAlert('請輸入代號與密碼！');return;}
+    btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>連線驗證中...';
+    try{const res=await postApi({action:'login',account:acc,password:pwd});CURRENT_USER_NAME=res.name;CURRENT_USER_ROLE=res.role||'operator';CURRENT_SESSION_TOKEN=res.token||'';CURRENT_CAPABILITIES=res.capabilities||capabilityFallback(CURRENT_USER_ROLE);if(!CURRENT_SESSION_TOKEN)throw new Error('伺服器未回傳登入憑證');document.getElementById('currentUserTag').innerText=`👤 ${res.name}｜${res.roleLabel||CURRENT_CAPABILITIES.roleLabel}`;document.getElementById('loginPortal').classList.add('hidden');const now=Date.now();localStorage.setItem('SHANSHI_SESSION',JSON.stringify({name:res.name,role:CURRENT_USER_ROLE,capabilities:CURRENT_CAPABILITIES,token:CURRENT_SESSION_TOKEN,timestamp:now,expiresAt:res.expiresAt||''}));updateRoleUi();startSessionTimer(now,res.expiresAt||'');hydrateInventoryCache();await loadData();}
+    catch(e){showAlert('🚨 登入失敗：\n'+e.message)}finally{btn.disabled=false;btn.innerText='登入';}
+}
+function checkLoginSession(){
+    const raw=localStorage.getItem('SHANSHI_SESSION');if(raw){try{const session=JSON.parse(raw),now=Date.now(),exp=session.expiresAt?Date.parse(session.expiresAt):0;if(session.token&&(exp?now<exp:now-session.timestamp<1800000)){CURRENT_USER_NAME=session.name;CURRENT_USER_ROLE=session.role||'operator';CURRENT_CAPABILITIES=session.capabilities||capabilityFallback(CURRENT_USER_ROLE);CURRENT_SESSION_TOKEN=session.token;document.getElementById('currentUserTag').innerText=`👤 ${session.name}｜${CURRENT_CAPABILITIES.roleLabel||CURRENT_USER_ROLE}`;updateRoleUi();document.getElementById('loginPortal').classList.add('hidden');startSessionTimer(session.timestamp||now,session.expiresAt||'');hydrateInventoryCache();loadData();return;}}catch{}}handleLogout();
+}
+function handleLogout(){
+    if(sessionInterval)clearInterval(sessionInterval);if(backgroundSyncTimer)clearTimeout(backgroundSyncTimer);hasLiveInventory=false;inventorySyncPromise=null;document.getElementById('sessionTimer')?.classList.add('hidden');const token=CURRENT_SESSION_TOKEN;localStorage.removeItem('SHANSHI_SESSION');CURRENT_USER_NAME='';CURRENT_USER_ROLE='operator';CURRENT_CAPABILITIES=capabilityFallback('operator');CURRENT_SESSION_TOKEN='';currentStocktakeSession=null;selectedStocktakeLine=null;updateRoleUi();if(token&&API_URL)fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify({action:'logout',_requestId:createRequestId()}),keepalive:true}).catch(()=>{});document.getElementById('currentUserTag').innerText='👤 未登入';document.getElementById('loginPortal').classList.remove('hidden');document.getElementById('loginAccount').value='';document.getElementById('loginPassword').value='';setSyncState('hidden');
 }
 
-function closeUserManagement() {
-    const modal = document.getElementById('userManagementModal');
-    if (!modal) return;
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-    syncModalPageLock();
+function updateDashboard(){
+    const items=scopedInventoryItems(),today=taipeiYmd(),weekAgo=taipeiYmd(new Date(Date.now()-7*86400000)),totals=new Map();let todayCount=0,pendingCount=0;
+    items.forEach(i=>{if(i.last_stocktake&&i.last_stocktake.slice(0,10)>=today)todayCount++;else if(!i.last_stocktake||i.last_stocktake.slice(0,10)<weekAgo)pendingCount++;if(!totals.has(i.id))totals.set(i.id,{qty:0,min:i.min_qty});const t=totals.get(i.id);t.qty+=Number(i.qty)||0;t.min=Number(i.min_qty)||0;});
+    let low=0;totals.forEach(t=>{if(t.qty<=t.min)low++});document.getElementById('totalItems').textContent=totals.size;document.getElementById('todayCount').textContent=todayCount;document.getElementById('pendingCount').textContent=pendingCount;document.getElementById('lowStockCount').textContent=low;
 }
+/* superseded filterItems removed in Commercial v4 cleanup */
 
-async function loadManagedUsers() {
-    const list = document.getElementById('managedUsersList');
-    if (!list || CURRENT_USER_ROLE !== 'admin') return;
-    list.innerHTML = '<div class="text-center text-slate-400 py-6"><i class="fas fa-spinner fa-spin mr-1"></i>讀取中</div>';
-    try {
-        const res = await postApi({ action: 'listUsers' });
-        managedUsers = Array.isArray(res.users) ? res.users : [];
-        renderManagedUsers();
-    } catch (error) {
-        list.innerHTML = `<div class="text-center text-red-500 py-6 font-bold">${escapeManagementHtml(error.message)}</div>`;
-    }
+function renderItems(items){
+    const box=document.getElementById('itemsList'),groups=new Map();items.forEach(i=>{if(!groups.has(i.id))groups.set(i.id,[]);groups.get(i.id).push(i)});if(!groups.size){box.innerHTML='<div class="v4-empty">目前無符合條件的庫存資料</div>';return;}
+    const today=taipeiYmd(),weekAgo=taipeiYmd(new Date(Date.now()-7*86400000));let html='';
+    groups.forEach((rows,id)=>{rows.sort((a,b)=>String(a.location_name).localeCompare(String(b.location_name),'zh-Hant')||fefoSortValue(a).localeCompare(fefoSortValue(b)));const base=rows[0],total=rows.reduce((s,x)=>s+Number(x.qty||0),0),latest=rows.reduce((v,x)=>String(x.last_stocktake||'')>v?String(x.last_stocktake||''):v,'');const low=total<=Number(base.min_qty||0),expired=rows.some(x=>x.qty>0&&x.expiry&&x.expiry<today),warn=rows.some(x=>{if(!x.expiry||x.qty<=0||x.expiry<today)return false;const d=new Date(today+'T00:00:00+08:00');d.setDate(d.getDate()+Number(x.warning_days||30));return x.expiry<=taipeiYmd(d)}),overdue=!latest||latest.slice(0,10)<weekAgo;
+        const chips=[low?'<span class="status-chip status-danger">低庫存</span>':'',expired?'<span class="status-chip status-danger">已過期</span>':warn?'<span class="status-chip status-warning">效期預警</span>':'',overdue?'<span class="status-chip status-warning">待盤點</span>':''].filter(Boolean).join('');
+        const fefoByLocation=new Set();for(const x of rows){if(x.qty>0&&!x.expired&&!fefoByLocation.has(x.location_id))fefoByLocation.add(x.location_id);}
+        const seenFefo=new Set();
+        html+=`<article class="inventory-card-v4"><div class="inventory-card-head"><div><h3>${escapeHtmlClient(base.name)}</h3><div class="v4-mono">ID ${escapeHtmlClient(id)}${base.category?` · ${escapeHtmlClient(base.category)}`:''}</div></div><div class="status-wrap">${chips}</div></div><div class="inventory-kpis"><div><span>總庫存</span><b class="${low?'danger':''}">${total}</b></div><div><span>安全 / 目標</span><b>${base.min_qty} / ${base.target_qty||'-'}</b></div><div><span>最後盤點</span><b class="small">${latest?escapeHtmlClient(formatToYYYYMMDDHHMM(latest)):'尚未盤點'}</b></div></div><div class="batch-list-v4">`;
+        for(const r of rows){const idx=itemIndexes.sourceIndexByBatch.get(getBatchIndexKey(r))??-1;const isFefo=r.qty>0&&!r.expired&&!seenFefo.has(r.location_id);if(isFefo)seenFefo.add(r.location_id);html+=`<div id="inline-row-${idx}" class="batch-row-v4"><div class="batch-main"><div class="batch-tags"><span class="location-chip"><i class="fas fa-warehouse"></i>${escapeHtmlClient(r.location_name||'未指定')}</span>${isFefo?'<span class="fefo-chip">FEFO</span>':''}${r.expired?'<span class="expired-chip">已過期</span>':''}</div><div><b>效期 ${escapeHtmlClient(formatToYYYYMMDD(r.expiry))}</b> · LOT <span class="v4-mono">${escapeHtmlClient(cleanLotString(r.lot))}</span> · <b>${r.qty}</b> 件</div>${r.note?`<div class="batch-note"><i class="fas fa-sticky-note mr-1"></i>${escapeHtmlClient(r.note)}</div>`:''}</div><div class="batch-actions"><button onclick="printInventoryLabel(${r.batch_id},${r.location_id})" class="mini-btn" title="列印標籤"><i class="fas fa-print"></i></button>${canOperateUi()?`<button onclick="startInlineStocktake(${idx},false)" class="mini-btn primary">快速盤</button>`:''}${canManageInventoryUi()?`<button onclick="openMovementFor(${r.batch_id},${r.location_id})" class="mini-btn warn">異動</button>`:''}</div><div id="inline-input-panel-${idx}" class="hidden inline-stocktake-v4"><span>實盤</span><input type="number" min="0" id="inline-qty-${idx}" value="${r.qty}"><button id="inline-save-btn-${idx}" onclick="submitCardStocktake(${idx})" class="mini-btn success">儲存</button><button id="inline-end-btn-${idx}" onclick="endInlineStocktake(${idx})" class="mini-btn">取消</button><button id="inline-dec-btn-${idx}" onclick="decrementInlineQty(${idx})" class="hidden">-1</button><span id="action-trigger-box-${idx}" class="hidden"></span></div></div>`;}html+='</div></article>';
+    });box.innerHTML=html;
 }
+function startInlineStocktake(index,isBarcodeScan=false){if(!canOperateUi()){showAlert('目前帳號為唯讀，不能執行盤點');return;}if(!hasLiveInventory){showToast('⚠️ 尚未取得即時庫存','error');return;}const row=document.getElementById(`inline-row-${index}`),panel=document.getElementById(`inline-input-panel-${index}`),input=document.getElementById(`inline-qty-${index}`);if(!row||!panel||!input)return;panel.classList.remove('hidden');input.disabled=false;if(!modifiedScanIndices.has(index)){input.value=isBarcodeScan?0:allItems[index].qty;modifiedScanIndices.add(index);}if(isBarcodeScan)input.value=(parseInt(input.value)||0)+1;input.focus();}
+function endInlineStocktake(index){document.getElementById(`inline-input-panel-${index}`)?.classList.add('hidden');modifiedScanIndices.delete(index);}
+async function submitCardStocktake(index){if(!(await ensureLiveInventoryReady()))return;const item=allItems[index],input=document.getElementById(`inline-qty-${index}`),qty=parseInt(input?.value);if(!Number.isFinite(qty)||qty<0){showAlert('請輸入正確實盤數量');return;}const diff=qty-Number(item.qty||0);let reason='快速盤點';if(diff!==0){reason=prompt(`帳面 ${item.qty}、實盤 ${qty}、差異 ${diff>0?'+':''}${diff}\n請輸入差異原因：`,'快速盤點調整')||'';if(!reason)return;}const btn=document.getElementById(`inline-save-btn-${index}`);if(btn){btn.disabled=true;btn.textContent='儲存中';}try{const res=await postApi({type:'盤點',id:item.id,name:item.name,lot:item.lot,expiry:item.expiry,qty,locationId:item.location_id,reason,note:'[首頁快速盤點]'});applyMutationResponse(res);modifiedScanIndices.delete(index);showToast('✅ 盤點已更新','success');scheduleBackgroundSync();}catch(e){showAlert('盤點失敗：'+e.message)}finally{if(btn){btn.disabled=false;btn.textContent='儲存';}}}
 
-function renderManagedUsers() {
-    const list = document.getElementById('managedUsersList');
-    if (!list) return;
-    if (managedUsers.length === 0) {
-        list.innerHTML = '<div class="text-center text-slate-400 py-6">尚無使用者</div>';
-        return;
-    }
-    list.innerHTML = managedUsers.map(user => {
-        const active = user.isActive === true;
-        const self = String(user.account) === String(CURRENT_USER_ACCOUNT);
-        const roleLabel = user.role === 'admin' ? '管理員' : '一般使用者';
-        const statusClass = active ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-100 text-slate-500 border-slate-200';
-        return `<div class="border border-gray-200 rounded-xl p-3 flex flex-col md:flex-row md:items-center gap-3 ${active ? 'bg-white' : 'bg-slate-50'}">
-            <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 flex-wrap"><span class="font-black text-slate-800">${escapeManagementHtml(user.displayName)}</span>${self ? '<span class="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">目前帳號</span>' : ''}</div>
-                <div class="text-xs text-slate-500 mt-1"><span class="font-mono">${escapeManagementHtml(user.account)}</span><span class="mx-1.5">•</span>${roleLabel}<span class="ml-2 border px-1.5 py-0.5 rounded ${statusClass}">${active ? '已啟用' : '已停用'}</span></div>
-            </div>
-            <div class="flex gap-2 shrink-0">
-                <button onclick="openResetUserPassword(${Number(user.id)})" class="flex-1 md:flex-none px-3 py-2 text-xs font-bold bg-amber-50 text-amber-700 border border-amber-100 rounded-lg"><i class="fas fa-key mr-1"></i>重設密碼</button>
-                <button onclick="toggleManagedUser(${Number(user.id)}, ${active ? 'false' : 'true'})" ${self && active ? 'disabled' : ''} class="flex-1 md:flex-none px-3 py-2 text-xs font-bold rounded-lg border ${active ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'} disabled:opacity-40">${active ? '停用' : '啟用'}</button>
-            </div>
-        </div>`;
-    }).join('');
+function populateBatchSelect(id,selectElementId,mode){const sel=document.getElementById(selectElementId);if(!sel)return;const locId=selectElementId.startsWith('scan')?getSelectedLocationId('scanLocation'):getSelectedLocationId('manualLocation'),today=taipeiYmd();let rows=(itemIndexes.byId.get(id)||[]).filter(i=>i.qty>0&&(!locId||Number(i.location_id)===locId)&&(mode!=='outbound'||!i.expiry||i.expiry>=today));rows.sort((a,b)=>fefoSortValue(a).localeCompare(fefoSortValue(b)));sel.innerHTML=rows.length?rows.map((b,i)=>`<option value='${escapeHtmlClient(JSON.stringify({batch_id:b.batch_id,lot:b.lot,expiry:b.expiry,location_id:b.location_id}))}'>${i===0?'⭐ FEFO｜':''}${escapeHtmlClient(b.location_name)}｜${escapeHtmlClient(formatToYYYYMMDD(b.expiry))}｜LOT ${escapeHtmlClient(cleanLotString(b.lot))}｜${b.qty} 件</option>`).join(''):'<option value="">無可用庫存批次</option>';}
+function autoFillManual(){const id=document.getElementById('manualId').value.trim(),mode=document.getElementById('manualType').value,loc=getSelectedLocationId('manualLocation'),rows=(itemIndexes.byId.get(id)||[]).filter(x=>!loc||Number(x.location_id)===loc),name=document.getElementById('manualName');if(mode==='入庫'){if(canViewCostUi())document.getElementById('manualPrice').value=rows.find(x=>x.price!==null)?.price??'';name.value='';document.getElementById('manualBatchSelect').innerHTML='';}else if(rows.length){name.value=rows[0].name||id;populateBatchSelect(id,'manualBatchSelect','outbound');}else{name.value='';document.getElementById('manualBatchSelect').innerHTML='';}}
+function toggleManualMode(){const mode=document.getElementById('manualType').value,name=document.getElementById('manualName');document.getElementById('manualDetailsContainer').classList.toggle('hidden',mode!=='入庫');document.getElementById('manualBatchContainer').classList.toggle('hidden',mode==='入庫');document.getElementById('manualPriceContainer').classList.toggle('hidden',mode!=='入庫'||!canViewCostUi());name.readOnly=mode!=='入庫';name.classList.toggle('bg-gray-100',mode!=='入庫');if(mode==='入庫')name.value='';else toggleManualFefo();autoFillManual();}
+function setScanMode(mode){scanMode=mode;document.getElementById('scanInbound').className=`flex-1 py-2.5 rounded-lg transition text-sm ${mode==='inbound'?'bg-blue-600 text-white font-bold shadow-sm':'bg-transparent text-gray-500 hover:text-gray-700 font-bold'}`;document.getElementById('scanOutbound').className=`flex-1 py-2.5 rounded-lg transition text-sm ${mode==='outbound'?'bg-blue-600 text-white font-bold shadow-sm':'bg-transparent text-gray-500 hover:text-gray-700 font-bold'}`;document.getElementById('scanManualDetails').classList.toggle('hidden',mode!=='inbound');document.getElementById('scanPriceContainer').classList.toggle('hidden',mode!=='inbound'||!canViewCostUi());document.getElementById('scanBatchContainer').classList.toggle('hidden',mode==='inbound');document.getElementById('scanName').readOnly=mode!=='inbound';if(mode==='outbound'&&scannedData)populateBatchSelect(scannedData,'scanBatchSelect','outbound');}
+async function submitManual(){if(!(await ensureLiveInventoryReady()))return;if(!canOperateUi()){showAlert('目前帳號為唯讀');return;}const id=document.getElementById('manualId').value.trim(),type=document.getElementById('manualType').value,qty=parseInt(document.getElementById('manualQty').value),loc=getSelectedLocationId('manualLocation'),name=document.getElementById('manualName').value.trim()||id,note=document.getElementById('manualNote').value.trim(),btn=document.getElementById('manualSubmitBtn');if(!id||!Number.isFinite(qty)||qty<=0||!loc){showAlert('請填寫 ID、儲位與大於 0 的數量');return;}const fefo=type==='領用'&&document.getElementById('manualUseFefo')?.checked;let payload;if(fefo)payload={action:'fefoIssue',id,qty,note,locationId:loc};else{let lot='',expiry='';if(type==='入庫'){lot=document.getElementById('manualLot').value.trim();expiry=document.getElementById('manualExpiry').value;if(!lot&&expiry)lot=expiry.replaceAll('-','');}else{const v=document.getElementById('manualBatchSelect').value;if(!v){showAlert('請選擇可用批次');return;}const x=JSON.parse(v);lot=x.lot;expiry=x.expiry;}payload={type,id,name,lot,expiry,qty,note,locationId:loc};if(canViewCostUi())payload.price=Number(document.getElementById('manualPrice').value)||0;}btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> 寫入中';try{const res=await postApi(payload);applyMutationResponse(res);showToast(fefo?'✅ FEFO 領用完成':'✅ 作業已完成','success');['manualId','manualName','manualLot','manualExpiry','manualQty','manualPrice','manualNote'].forEach(x=>{const e=document.getElementById(x);if(e)e.value=''});document.getElementById('manualBatchSelect').innerHTML='';scheduleBackgroundSync();}catch(e){showAlert('送出失敗：'+e.message)}finally{btn.disabled=false;btn.textContent='送出作業';}}
+async function submitScan(){if(!(await ensureLiveInventoryReady()))return;if(!canOperateUi()){showAlert('目前帳號為唯讀');return;}const qty=parseInt(document.getElementById('scanQty').value),loc=getSelectedLocationId('scanLocation'),btn=document.getElementById('scanSubmitBtn'),note=document.getElementById('scanNote').value.trim(),name=document.getElementById('scanName').value.trim()||scannedData;if(!scannedData||!Number.isFinite(qty)||qty<=0||!loc){showAlert('請確認條碼、儲位與數量');return;}const fefo=scanMode==='outbound'&&document.getElementById('scanUseFefo')?.checked;let payload;if(fefo)payload={action:'fefoIssue',id:scannedData,qty,note,locationId:loc};else{let lot='',expiry='';if(scanMode==='inbound'){lot=document.getElementById('scanLot').value.trim();expiry=document.getElementById('scanExpiry').value;if(!lot&&expiry)lot=expiry.replaceAll('-','');}else{const v=document.getElementById('scanBatchSelect').value;if(!v){showAlert('無可用批次');return;}const x=JSON.parse(v);lot=x.lot;expiry=x.expiry;}payload={type:scanMode==='inbound'?'入庫':'領用',id:scannedData,name,lot,expiry,qty,note,locationId:loc};if(canViewCostUi())payload.price=Number(document.getElementById('scanPrice').value)||0;}btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> 寫入中';try{const res=await postApi(payload);applyMutationResponse(res);showToast('✅ 資料已成功儲存','success');document.getElementById('scanForm').classList.add('hidden');document.getElementById('scanResult').classList.add('hidden');document.getElementById('scanNote').value='';scheduleBackgroundSync();startScanner().catch(()=>{});}catch(e){showAlert('送出失敗：'+e.message)}finally{btn.disabled=false;btn.textContent='確認送出';}}
+
+async function startHomeScanner(){if(!canOperateUi()){showAlert('目前帳號為唯讀');return;}if(!selectedDashboardLocationId&&activeLocationsOnly().length>1){showAlert('快速掃描盤點前，請先在首頁選擇一個儲位');return;}return await startHomeScannerV4Impl();}
+async function startHomeScannerV4Impl(){try{await ensureQrLibraryLoaded()}catch(e){showToast(e.message,'error');return;}if(homeQrCode){try{if(homeQrCode.isScanning)await homeQrCode.stop()}catch{}try{homeQrCode.clear()}catch{}homeQrCode=null;}homeQrCode=new Html5Qrcode('homeReader');isHomeScanningActive=true;try{await homeQrCode.start({facingMode:'environment'},{fps:15,aspectRatio:1},decodedText=>{if(!isHomeScanningActive)return;const now=Date.now();if(now-lastScanTime<1000)return;lastScanTime=now;const candidates=(itemIndexes.byId.get(decodedText)||[]).filter(i=>!selectedDashboardLocationId||Number(i.location_id)===selectedDashboardLocationId);const item=candidates.find(i=>document.getElementById(`inline-row-${itemIndexes.sourceIndexByBatch.get(getBatchIndexKey(i))}`));if(!item){playErrorSound();showToast('❌ 此儲位無此品項','error');return;}const idx=itemIndexes.sourceIndexByBatch.get(getBatchIndexKey(item));playBeepSound();startInlineStocktake(idx,true);document.getElementById('homeScanStatus').innerHTML=`<span class="text-green-400 font-bold">${escapeHtmlClient(item.name)}</span>｜實盤 ${document.getElementById(`inline-qty-${idx}`).value}`;},()=>{});}catch(e){isHomeScanningActive=false;showToast('相機啟動失敗','error')}}
+async function submitAllHomeScans(){if(!(await ensureLiveInventoryReady()))return;if(!modifiedScanIndices.size){showToast('尚未累計任何項目','error');return;}const rows=[];for(const idx of modifiedScanIndices){const item=allItems[idx],qty=parseInt(document.getElementById(`inline-qty-${idx}`)?.value);if(!Number.isFinite(qty)||qty<0)continue;rows.push({type:'盤點',batch_id:item.batch_id,id:item.id,lot:item.lot,expiry:item.expiry,qty,location_id:item.location_id,reason:qty===Number(item.qty)?'快速批次盤點':'POS 掃描盤點差異',note:'[POS 掃描盤點]'});}if(!rows.length)return;const btn=document.getElementById('homeScanSaveBtn'),old=btn.innerHTML;btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> 儲存中';try{const res=await postApi({action:'batchStocktake',items:rows});applyMutationResponse(res);modifiedScanIndices.clear();showToast('✅ 快速盤點已完成','success');scheduleBackgroundSync();}catch(e){showAlert('盤點失敗：'+e.message)}finally{btn.disabled=false;btn.innerHTML=old;}}
+
+async function startStocktakeWorkflow(){if(!(await ensureLiveInventoryReady()))return;if(!canOperateUi()){showAlert('目前帳號為唯讀');return;}const locationId=getSelectedLocationId('stocktakeLocation');if(!locationId){showAlert('請選擇盤點儲位');return;}const btn=document.getElementById('stocktakeStartBtn');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>建立盤點單';try{const res=await postApi({action:'startStocktakeSession',locationId,blindMode:document.getElementById('stocktakeBlindMode').checked,note:document.getElementById('stocktakeSessionNote').value.trim()});currentStocktakeSession=res.session;renderStocktakeSession();showToast('✅ 盤點工作階段已建立','success');}catch(e){showAlert('無法開始盤點：'+e.message)}finally{btn.disabled=false;btn.textContent='開始今日盤點';}}
+function renderStocktakeSession(){const start=document.getElementById('stocktakeStartPanel'),active=document.getElementById('stocktakeActivePanel'),badge=document.getElementById('stocktakeSessionBadge');if(!currentStocktakeSession||currentStocktakeSession.status!=='open'){start.classList.remove('hidden');active.classList.add('hidden');badge.textContent='未開始';selectedStocktakeLine=null;return;}start.classList.add('hidden');active.classList.remove('hidden');badge.textContent=`進行中｜${currentStocktakeSession.location_name}${currentStocktakeSession.blind_mode?'｜盲盤':''}`;const lines=currentStocktakeSession.lines||[],done=lines.filter(x=>x.status==='counted'),matches=done.filter(x=>Number(x.difference)===0).length;document.getElementById('stocktakeProgress').textContent=`${done.length} / ${lines.length}`;document.getElementById('stocktakeMatchCount').textContent=matches;document.getElementById('stocktakeVarianceCount').textContent=done.length-matches;document.getElementById('stocktakeProgressBar').style.width=`${lines.length?Math.round(done.length/lines.length*100):100}%`;renderStocktakeChecklist();}
+function renderStocktakeChecklist(){const box=document.getElementById('stocktakeChecklist');if(!box)return;if(!currentStocktakeSession){box.innerHTML='<div class="v4-muted">尚未開始盤點</div>';return;}const q=(document.getElementById('stocktakeChecklistSearch')?.value||'').toLowerCase();box.innerHTML=(currentStocktakeSession.lines||[]).filter(x=>!q||[x.id,x.name,x.lot].some(v=>String(v||'').toLowerCase().includes(q))).map(x=>{const done=x.status==='counted',diff=Number(x.difference)||0;return `<button onclick="selectStocktakeBatch('${x.batch_id}')" class="stocktake-line ${done?'done':''}"><div><b>${escapeHtmlClient(x.name)}</b><small>${escapeHtmlClient(x.id)} · ${escapeHtmlClient(x.location_name)} · LOT ${escapeHtmlClient(x.lot||'無')} · ${escapeHtmlClient(formatToYYYYMMDD(x.expiry))}</small></div><span>${done?`實盤 ${x.counted_qty}｜差異 ${diff>0?'+':''}${diff}`:(currentStocktakeSession.blind_mode?'盲盤待盤':`帳面 ${x.system_qty}`)}</span></button>`}).join('')||'<div class="v4-muted">沒有符合項目</div>';}
+function selectStocktakeBatch(lineId){if(!currentStocktakeSession)return;const line=(currentStocktakeSession.lines||[]).find(x=>String(x.batch_id)===String(lineId));if(!line||line.status==='counted')return;selectedStocktakeLine=line;const same=(currentStocktakeSession.lines||[]).filter(x=>x.status==='pending'&&x.id===line.id);document.getElementById('stocktakeBatchSelect').innerHTML=same.map(x=>`<option value="${x.batch_id}" ${String(x.batch_id)===String(line.batch_id)?'selected':''}>${escapeHtmlClient(formatToYYYYMMDD(x.expiry))}｜${escapeHtmlClient(x.lot||'無')}｜${escapeHtmlClient(x.location_name)}</option>`).join('');document.getElementById('stocktakeSelectedName').textContent=line.name||line.id;document.getElementById('stocktakeSelectedMeta').textContent=`${line.location_name} · ID ${line.id} · LOT ${line.lot||'無'} · 效期 ${formatToYYYYMMDD(line.expiry)}`;document.getElementById('stocktakeSystemQty').textContent=currentStocktakeSession.blind_mode?'帳面：盲盤隱藏':`帳面：${line.system_qty}`;document.getElementById('stocktakeQty').value='';document.getElementById('stocktakeReason').value='';document.getElementById('stocktakeLineNote').value='';document.getElementById('stocktakeReasonWrap').classList.toggle('hidden',!currentStocktakeSession.blind_mode);document.getElementById('stocktakeCountPanel').classList.remove('hidden');document.getElementById('stocktakeQty').focus();}
+async function submitStocktakeCount(){if(!selectedStocktakeLine||!currentStocktakeSession)return;const qty=parseInt(document.getElementById('stocktakeQty').value);if(!Number.isFinite(qty)||qty<0){showAlert('請輸入正確實盤數量');return;}const reason=document.getElementById('stocktakeReason').value,note=document.getElementById('stocktakeLineNote').value.trim(),btn=document.getElementById('stocktakeCountBtn');btn.disabled=true;btn.textContent='儲存中…';try{const res=await postApi({action:'stocktakeRecord',sessionId:currentStocktakeSession.session_id,batch_id:selectedStocktakeLine.batch_id,location_id:selectedStocktakeLine.location_id,qty,reason,note});applyMutationResponse(res);currentStocktakeSession=res.session||currentStocktakeSession;showToast(Number(res.difference)===0?'✅ 盤點一致':`⚠️ 差異 ${res.difference} 已記錄`,'success');closeStocktakeCountPanel();renderStocktakeSession();const next=(currentStocktakeSession.lines||[]).find(x=>x.status==='pending');if(next)selectStocktakeBatch(next.batch_id);scheduleBackgroundSync();}catch(e){if(/差異原因/.test(e.message))document.getElementById('stocktakeReasonWrap').classList.remove('hidden');showAlert('盤點儲存失敗：'+e.message)}finally{btn.disabled=false;btn.textContent='確認並繼續下一筆';}}
+
+async function loadAnomalyCenter(force=false){if(!CURRENT_SESSION_TOKEN||!hasLiveInventory)return;try{const r=await getApiResource('anomalies',{locationId:selectedDashboardLocationId||''});currentAnomalies=r;renderAnomalyCenter();}catch(e){if(force)showToast('異常中心讀取失敗：'+e.message,'error')}}
+function renderAnomalyCenter(){const box=document.getElementById('anomalyCenter'),rep=document.getElementById('reportAnomalies');if(!box||!currentAnomalies)return;const c=currentAnomalies.counts||{},cards=[['expired','已過期',c.expired,'danger'],['expiring','效期預警',c.expiring,'warning'],['low','低庫存',c.low,'warning'],['overdue','待盤點',c.overdueStocktake,'info'],['variance','未結差異',c.unresolvedVariance,'danger']];box.innerHTML=cards.map(x=>`<button onclick="handleAnomalyClick('${x[0]}')" class="anomaly-tile ${x[3]}"><span>${x[1]}</span><b>${Number(x[2]||0)}</b></button>`).join('');if(rep)rep.innerHTML=`<div class="v4-panel"><div class="v4-panel-title">異常總覽</div><div class="anomaly-grid">${box.innerHTML}</div></div>`;}
+/* superseded handleAnomalyClick removed in Commercial v4 cleanup */
+
+async function loadAnalyticsSummary(){if(!CURRENT_SESSION_TOKEN||!hasLiveInventory)return;try{currentAnalytics=await getApiResource('analytics',{locationId:selectedDashboardLocationId||''});renderAnalytics();}catch{}}
+function renderAnalytics(){if(!currentAnalytics)return;const dash=document.getElementById('dashboardAnalytics'),rep=document.getElementById('reportAnalytics'),suggest=(currentAnalytics.procurementSuggestions||[]).slice(0,5),top=(currentAnalytics.topUsage||[]).slice(0,5);const low=suggest.length?suggest.map(x=>`<div class="recommend-row"><span>${escapeHtmlClient(x.name)}</span><b>建議 +${x.recommended_qty}</b><small>${x.days_cover===null?'無近30日用量':`約 ${x.days_cover} 天`}</small></div>`).join(''):'<div class="v4-muted">目前無補貨建議</div>';if(dash)dash.innerHTML=low;const trend=(currentAnalytics.dailyTrend||[]).slice(-14),max=Math.max(1,...trend.map(x=>Number(x.outbound||0)));const bars=trend.map(x=>`<div class="trend-col" title="${x.date} 領用 ${x.outbound}"><i style="height:${Math.max(3,Math.round(Number(x.outbound||0)/max*70))}px"></i><small>${x.date.slice(5)}</small></div>`).join('');if(rep)rep.innerHTML=`<div class="v4-panel"><div class="v4-panel-title">近 14 日領用趨勢</div><div class="trend-chart">${bars||'<div class="v4-muted">尚無領用資料</div>'}</div></div><div class="v4-panel"><div class="v4-panel-title">補貨建議</div>${low}</div><div class="v4-panel"><div class="v4-panel-title">近 30 日使用量 Top 5</div>${top.map(x=>`<div class="recommend-row"><span>${escapeHtmlClient(x.name)}</span><b>${x.used_30}</b></div>`).join('')||'<div class="v4-muted">尚無領用資料</div>'}${currentAnalytics.costVisible?`<div class="cost-summary">目前庫存價值：NT$ ${Number(currentAnalytics.inventoryValue||0).toLocaleString('zh-TW')}</div>`:''}</div>`;}
+function generateReport(){loadAnalyticsSummary();loadAnomalyCenter();const box=document.getElementById('reportContent');if(box)box.innerHTML='<div class="v4-muted">報表以 D1 即時分析為準；上方提供趨勢、補貨與異常中心。財務月報可由下方寄送。</div>';}
+/* superseded renderAdminInventory removed in Commercial v4 cleanup */
+
+async function saveAdminItem(id){const k=encodeURIComponent(id),payload={action:'adminUpdateItem',id,name:document.getElementById(`adm-name-${k}`).value,category:document.getElementById(`adm-cat-${k}`).value,minQty:document.getElementById(`adm-min-${k}`).value,targetQty:document.getElementById(`adm-target-${k}`).value,warningDays:document.getElementById(`adm-warning-${k}`).value,leadTimeDays:document.getElementById(`adm-lead-${k}`).value};if(canViewCostUi())payload.price=document.getElementById(`adm-price-${k}`)?.value||0;try{const res=await postApi(payload);applyMutationResponse(res);showToast('✅ 品項主檔已更新','success');renderAdminInventory();}catch(e){showAlert(e.message)}}
+async function saveAdminBatch(batchId){try{const res=await postApi({action:'adminUpdateBatch',batch_id:batchId,lot:document.getElementById(`adm-lot-${batchId}`).value,expiry:document.getElementById(`adm-exp-${batchId}`).value,note:document.getElementById(`adm-note-${batchId}`).value,reason:'管理中心批次資料修改'});applyMutationResponse(res);showToast('✅ 批次資料已更新','success');renderAdminInventory();}catch(e){showAlert(e.message)}}
+async function toggleItemActiveV4(id,enable){const reason=prompt(enable?'重新啟用品項原因：':'停用品項原因：',enable?'重新啟用':'停止使用')||'';if(!reason)return;try{await postApi({action:'setItemActive',id,isActive:enable,reason});showToast(enable?'✅ 已啟用':'✅ 已停用','success');await syncInventory({silentMode:true});renderAdminInventory();}catch(e){showAlert(e.message)}}
+
+function movementBatchOptions(){return allItems.filter(x=>x.is_active).map(x=>`<option value="${x.batch_id}:${x.location_id}">${escapeHtmlClient(x.name)}｜${escapeHtmlClient(x.location_name)}｜LOT ${escapeHtmlClient(x.lot||'無')}｜效期 ${escapeHtmlClient(formatToYYYYMMDD(x.expiry))}｜${x.qty} 件</option>`).join('');}
+function renderMovementCenter(prefill=null){if(!canManageInventoryUi()){showAlert('權限不足');return;}const box=document.getElementById('adminContent');box.innerHTML=`<section class="v4-panel"><div class="v4-panel-title"><span>庫存異動單</span><small>數量不得直接覆寫；所有變動皆留下稽核紀錄</small></div><div class="movement-form"><label>異動類型<select id="moveType" onchange="updateMovementFormV4()"><option>報廢</option><option>退貨</option><option>庫存調整</option><option>調撥</option></select></label><label>來源批次 / 儲位<select id="moveBatch" onchange="updateMovementFormV4()">${movementBatchOptions()}</select></label><label id="moveQtyWrap">數量<input id="moveQty" type="number" min="1"></label><label id="moveNewQtyWrap" class="hidden">調整後庫存<input id="moveNewQty" type="number" min="0"></label><label id="moveTargetWrap" class="hidden">目的儲位<select id="moveTarget">${locationOptionsHtml(false)}</select></label><label>原因<input id="moveReason" placeholder="必填，例如：過期、供應商退貨、盤點修正"></label><label>備註<textarea id="moveNote" rows="2"></textarea></label><button onclick="submitMovementV4()" id="moveSubmit" class="v4-primary-btn">建立異動單</button></div></section>`;if(prefill){document.getElementById('moveBatch').value=`${prefill.batchId}:${prefill.locationId}`;}updateMovementFormV4();}
+function updateMovementFormV4(){const t=document.getElementById('moveType')?.value;document.getElementById('moveQtyWrap')?.classList.toggle('hidden',t==='庫存調整');document.getElementById('moveNewQtyWrap')?.classList.toggle('hidden',t!=='庫存調整');document.getElementById('moveTargetWrap')?.classList.toggle('hidden',t!=='調撥');}
+function openMovementFor(batchId,locationId){switchTab('admin');setTimeout(()=>renderMovementCenter({batchId,locationId}),0);}
+async function submitMovementV4(){const v=document.getElementById('moveBatch').value;if(!v){showAlert('請選擇批次');return;}const [batch_id,locationId]=v.split(':').map(Number),movementType=document.getElementById('moveType').value,reason=document.getElementById('moveReason').value.trim(),note=document.getElementById('moveNote').value.trim();if(!reason){showAlert('異動原因為必填');return;}const payload={action:'inventoryMovement',movementType,batch_id,locationId,reason,note};if(movementType==='庫存調整'){const raw=document.getElementById('moveNewQty').value.trim();if(raw===''){showAlert('請輸入調整後庫存，避免空白被誤判為 0');return;}const newQty=Number(raw);if(!Number.isInteger(newQty)||newQty<0){showAlert('調整後庫存必須是 0 以上整數');return;}payload.newQty=newQty;}else{const raw=document.getElementById('moveQty').value.trim(),qty=Number(raw);if(raw===''||!Number.isInteger(qty)||qty<=0){showAlert('異動數量必須是大於 0 的整數');return;}payload.qty=qty;}if(movementType==='調撥'){const targetLocationId=Number(document.getElementById('moveTarget').value);if(!targetLocationId){showAlert('請選擇目的儲位');return;}if(targetLocationId===locationId){showAlert('來源與目的儲位不可相同');return;}payload.targetLocationId=targetLocationId;}const btn=document.getElementById('moveSubmit');btn.disabled=true;btn.textContent='處理中…';try{const res=await postApi(payload);applyMutationResponse(res);showToast(`✅ ${res.message}${res.documentNo?`｜${res.documentNo}`:''}`,'success');scheduleBackgroundSync();renderMovementCenter();}catch(e){showAlert('異動失敗：'+e.message)}finally{btn.disabled=false;btn.textContent='建立異動單';}}
+
+async function loadLocationManager(){if(!canManageInventoryUi()){showAlert('權限不足');return;}const box=document.getElementById('adminContent');try{const r=await getApiResource('locations',{includeInactive:1});allLocations=r.locations||[];box.innerHTML=`<section class="v4-panel"><div class="v4-panel-title">新增儲位</div><div class="location-create"><input id="locCode" placeholder="代碼，例如 ROOM1"><input id="locName" placeholder="名稱，例如 診間1"><button onclick="createLocationV4()" class="v4-primary-btn">新增</button></div></section>${allLocations.map(l=>`<div class="location-row"><div><b>${escapeHtmlClient(l.name)}</b><small>${escapeHtmlClient(l.code)}</small></div><input id="loc-name-${l.location_id}" value="${escapeHtmlClient(l.name)}"><button onclick="saveLocationV4(${l.location_id},${Number(l.is_active)!==0})" class="mini-btn primary">儲存</button><button onclick="toggleLocationV4(${l.location_id},${Number(l.is_active)===0})" class="mini-btn ${Number(l.is_active)===1?'danger':'success'}">${Number(l.is_active)===1?'停用':'啟用'}</button></div>`).join('')}`;}catch(e){showAlert(e.message)}}
+async function createLocationV4(){try{const r=await postApi({action:'createLocation',code:document.getElementById('locCode').value,name:document.getElementById('locName').value});showToast('✅ 儲位已建立','success');allLocations=r.locations||allLocations;populateLocationSelectors();loadLocationManager();}catch(e){showAlert(e.message)}}
+async function saveLocationV4(id,active){try{const r=await postApi({action:'updateLocation',locationId:id,name:document.getElementById(`loc-name-${id}`).value,isActive:active});allLocations=r.locations||allLocations;populateLocationSelectors();showToast('✅ 儲位已更新','success');loadLocationManager();}catch(e){showAlert(e.message)}}
+async function toggleLocationV4(id,active){if(!confirm(`確定${active?'啟用':'停用'}此儲位？`))return;try{const r=await postApi({action:'updateLocation',locationId:id,isActive:active,name:document.getElementById(`loc-name-${id}`).value});allLocations=r.locations||allLocations;populateLocationSelectors();loadLocationManager();}catch(e){showAlert(e.message)}}
+
+async function loadAuditCenter(){if(!canManageInventoryUi()){showAlert('權限不足');return;}const box=document.getElementById('adminContent');box.innerHTML='<div class="v4-muted">讀取稽核紀錄…</div>';try{const [a,v]=await Promise.all([getApiResource('audit',{limit:150}),getApiResource('adjustments')]);box.innerHTML=`<section class="v4-panel"><div class="v4-panel-title">未結盤點差異</div>${(v.adjustments||[]).filter(x=>!x.resolved_at).map(x=>`<div class="audit-row variance"><div><b>${escapeHtmlClient(x.name||x.item_id)}｜${escapeHtmlClient(x.location_name||'')}</b><small>${escapeHtmlClient(x.created_at)}｜差異 ${x.difference>0?'+':''}${x.difference}｜${escapeHtmlClient(x.reason||'')}</small></div><button onclick="resolveVarianceV4(${x.adjustment_id})" class="mini-btn success">結案</button></div>`).join('')||'<div class="v4-muted">目前沒有未結差異</div>'}</section><section class="v4-panel"><div class="v4-panel-title">Audit Log（不可由介面刪除）</div><div class="audit-list">${(a.auditLogs||[]).map(x=>`<div class="audit-row"><div><b>${escapeHtmlClient(x.action)}</b><small>${escapeHtmlClient(x.created_at)}｜${escapeHtmlClient(x.user_name||'系統')}｜${escapeHtmlClient(x.entity_type)} ${escapeHtmlClient(x.entity_id)}</small>${x.reason?`<small>原因：${escapeHtmlClient(x.reason)}</small>`:''}</div></div>`).join('')}</div></section>`;}catch(e){showAlert(e.message)}}
+async function resolveVarianceV4(id){const note=prompt('請輸入差異結案說明：')||'';if(!note)return;try{await postApi({action:'resolveAdjustment',adjustmentId:id,resolutionNote:note});showToast('✅ 差異已結案','success');loadAuditCenter();loadAnomalyCenter();}catch(e){showAlert(e.message)}}
+
+async function loadAdminUsers(){if(!canSystemAdminUi()){showAlert('僅系統管理員可管理帳號');return;}try{const r=await getApiResource('users');renderAdminUsers(r.users||[])}catch(e){showAlert(e.message)}}
+function renderAdminUsers(users){const box=document.getElementById('adminContent'),roles=[['viewer','唯讀'],['operator','一般操作員'],['inventory_manager','庫存管理員'],['system_admin','系統管理員']];box.innerHTML=`<section class="v4-panel"><div class="v4-panel-title">新增使用者</div><div class="user-create"><input id="newUserAccount" placeholder="帳號"><input id="newUserName" placeholder="姓名"><input id="newUserPassword" type="password" placeholder="密碼至少 8 碼"><select id="newUserRole">${roles.map(r=>`<option value="${r[0]}">${r[1]}</option>`).join('')}</select><button onclick="createAdminUser()" class="v4-primary-btn">新增</button></div></section>${users.map(u=>`<div class="user-row"><div><b>${escapeHtmlClient(u.display_name||u.account)}</b><small>${escapeHtmlClient(u.account)}｜${escapeHtmlClient(u.role_label||u.access_role)}</small></div><select id="role-${u.id}" onchange="changeUserRoleV4(${u.id})">${roles.map(r=>`<option value="${r[0]}" ${u.access_role===r[0]?'selected':''}>${r[1]}</option>`).join('')}</select><button onclick="resetAdminPassword(${u.id},decodeURIComponent('${encodeURIComponent(u.account)}'))" class="mini-btn">密碼</button><button onclick="toggleAdminUser(${u.id},${Number(u.is_active)!==1})" class="mini-btn ${Number(u.is_active)===1?'danger':'success'}">${Number(u.is_active)===1?'停用':'啟用'}</button></div>`).join('')}`;}
+async function createAdminUser(){const account=document.getElementById('newUserAccount').value.trim(),displayName=document.getElementById('newUserName').value.trim(),password=document.getElementById('newUserPassword').value,accessRole=document.getElementById('newUserRole').value;if(!account||password.length<8){showAlert('帳號不可空白，密碼至少 8 碼');return;}try{await postApi({action:'createUser',account,displayName,password,accessRole});showToast('✅ 使用者已新增','success');loadAdminUsers();}catch(e){showAlert(e.message)}}
+async function changeUserRoleV4(id){const accessRole=document.getElementById(`role-${id}`).value;if(!confirm('變更角色後該使用者現有登入會失效，確定繼續？')){loadAdminUsers();return;}try{await postApi({action:'setUserRole',userId:id,accessRole});showToast('✅ 權限已更新','success');loadAdminUsers();}catch(e){showAlert(e.message);loadAdminUsers();}}
+
+async function loadSystemCenter(){if(!canSystemAdminUi()){showAlert('僅系統管理員可查看');return;}const box=document.getElementById('adminContent');box.innerHTML='<div class="v4-muted">讀取系統狀態…</div>';try{const [logs,bak]=await Promise.all([getApiResource('systemLogs',{limit:100}),getApiResource('backupStatus')]);box.innerHTML=`<section class="v4-panel"><div class="v4-panel-title">備份與還原</div><div class="backup-card"><b>${escapeHtmlClient(bak.policy)}</b><p>${escapeHtmlClient(bak.note)}</p><p>目前設定保留：${bak.retentionDays} 天</p><small>每日健康檢查點：${(bak.checkpoints||[]).length} 筆。正式還原請依專案 BACKUP_RESTORE.md 使用 Wrangler Time Travel。</small></div></section><section class="v4-panel"><div class="v4-panel-title">系統錯誤紀錄</div><div class="audit-list">${(logs.systemLogs||[]).map(x=>`<div class="audit-row ${escapeHtmlClient(x.severity)}"><div><b>${escapeHtmlClient(x.event_type)}</b><small>${escapeHtmlClient(x.created_at)}｜${escapeHtmlClient(x.severity)}｜${escapeHtmlClient(x.user_name||'系統')}</small><small>${escapeHtmlClient(x.message)}</small></div></div>`).join('')||'<div class="v4-muted">目前無系統錯誤紀錄</div>'}</div></section><button onclick="installPwa()" class="v4-primary-btn"><i class="fas fa-mobile-alt mr-1"></i>安裝 PWA 到此裝置</button>`;}catch(e){showAlert(e.message)}}
+
+async function ensureBarcodeLibraryLoaded(){if(window.JsBarcode)return true;if(barcodeLibraryPromise)return barcodeLibraryPromise;barcodeLibraryPromise=new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=BARCODE_SCRIPT_URL;s.async=true;s.onload=()=>resolve(true);s.onerror=()=>{barcodeLibraryPromise=null;reject(new Error('條碼列印元件載入失敗'))};document.head.appendChild(s)});return barcodeLibraryPromise;}
+async function printInventoryLabel(batchId,locationId){const item=allItems.find(x=>Number(x.batch_id)===Number(batchId)&&Number(x.location_id)===Number(locationId));if(!item){showAlert('找不到標籤資料');return;}try{await ensureBarcodeLibraryLoaded();const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');JsBarcode(svg,item.id,{format:'CODE128',displayValue:true,height:45,margin:4,fontSize:12});const w=window.open('','_blank','width=520,height=600');if(!w)throw new Error('瀏覽器封鎖列印視窗，請允許彈出視窗');w.document.write(`<!doctype html><html><head><title>庫存標籤</title><style>body{font-family:Arial,'Noto Sans TC',sans-serif;padding:16px}.label{width:82mm;border:1px solid #111;padding:10px}.name{font-size:18px;font-weight:800}.meta{font-size:12px;margin-top:5px}.note{font-size:11px;margin-top:5px;white-space:pre-wrap}@media print{button{display:none}.label{border:1px solid #111}}</style></head><body><div class="label"><div class="name">${escapeHtmlClient(item.name)}</div><div class="meta">ID ${escapeHtmlClient(item.id)}｜${escapeHtmlClient(item.location_name)}</div><div class="meta">LOT ${escapeHtmlClient(item.lot||'無')}｜EXP ${escapeHtmlClient(formatToYYYYMMDD(item.expiry))}</div>${svg.outerHTML}${item.note?`<div class="note">備註：${escapeHtmlClient(item.note)}</div>`:''}</div><button onclick="window.print()">列印</button></body></html>`);w.document.close();}catch(e){showAlert(e.message)}}
+
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();pwaInstallPrompt=e;document.getElementById('pwaInstallBtn')?.classList.remove('hidden');});
+window.addEventListener('appinstalled',()=>{pwaInstallPrompt=null;document.getElementById('pwaInstallBtn')?.classList.add('hidden');showToast('✅ Arenastone 已安裝到裝置','success');});
+async function installPwa(){if(pwaInstallPrompt){pwaInstallPrompt.prompt();await pwaInstallPrompt.userChoice;pwaInstallPrompt=null;document.getElementById('pwaInstallBtn')?.classList.add('hidden');return;}showAlert('若瀏覽器未顯示安裝提示：iPhone/iPad 請使用 Safari「分享 → 加入主畫面」；Android Chrome 請使用選單「安裝應用程式」。');}
+/* superseded switchTab removed in Commercial v4 cleanup */
+
+
+var currentAnomalyFilter = '';
+function updateRoleUi(){
+    CURRENT_CAPABILITIES={...capabilityFallback(CURRENT_USER_ROLE),...CURRENT_CAPABILITIES};
+    document.getElementById('adminHeaderBtn')?.classList.toggle('hidden',!canManageInventoryUi());document.getElementById('adminUsersTab')?.classList.toggle('hidden',!canSystemAdminUi());document.getElementById('adminSystemTab')?.classList.toggle('hidden',!canSystemAdminUi());
+    const auto=document.getElementById('btnAutoSchedule'),manualReport=document.getElementById('btnManualReport');for(const b of [auto,manualReport])if(b){b.disabled=!canManageInventoryUi();b.classList.toggle('opacity-50',!canManageInventoryUi());}
+    document.getElementById('scanPriceContainer')?.classList.toggle('hidden',scanMode!=='inbound'||!canViewCostUi());document.getElementById('manualPriceContainer')?.classList.toggle('hidden',document.getElementById('manualType')?.value!=='入庫'||!canViewCostUi());
+    const badge=document.getElementById('adminRoleBadge');if(badge)badge.textContent=CURRENT_CAPABILITIES.roleLabel||CURRENT_USER_ROLE;
+    document.querySelectorAll('.nav-item').forEach(b=>{const oc=b.getAttribute('onclick')||'';if(oc.includes("'threshold'")&&!canManageInventoryUi())b.classList.add('v4-role-disabled');else b.classList.remove('v4-role-disabled');});
 }
-
-async function createManagedUser() {
-    const account = document.getElementById('newUserAccount').value.trim();
-    const displayName = document.getElementById('newUserDisplayName').value.trim();
-    const password = document.getElementById('newUserPassword').value;
-    const role = document.getElementById('newUserRole').value;
-    if (!account || !password) {
-        showAlert('請輸入登入帳號與密碼');
-        return;
-    }
-    const button = document.getElementById('createUserButton');
-    button.disabled = true;
-    const original = button.innerHTML;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>新增中';
-    try {
-        const res = await postApi({ action: 'createUser', account, displayName, password, role });
-        managedUsers = Array.isArray(res.users) ? res.users : managedUsers;
-        renderManagedUsers();
-        document.getElementById('newUserAccount').value = '';
-        document.getElementById('newUserDisplayName').value = '';
-        document.getElementById('newUserPassword').value = '';
-        document.getElementById('newUserRole').value = 'user';
-        showToast(`✅ ${res.message || '使用者已新增'}`, 'success');
-    } catch (error) {
-        showAlert('新增失敗：' + error.message);
-    } finally {
-        button.disabled = false;
-        button.innerHTML = original;
-    }
+function filterItems(){
+    const search=(document.getElementById('searchInput')?.value||'').toLowerCase().trim(),category=document.getElementById('categoryFilter')?.value||'',status=document.getElementById('statusFilter')?.value||'',lowOnly=!!document.getElementById('lowStockOnly')?.checked,today=taipeiYmd(),weekAgo=taipeiYmd(new Date(Date.now()-7*86400000)),scope=scopedInventoryItems(),totals=new Map();scope.forEach(i=>totals.set(i.id,(totals.get(i.id)||0)+Number(i.qty||0)));
+    filteredItems=scope.filter(i=>{const text=[i.name,i.id,i.lot,i.note,i.location_name,i.location_code].join(' ').toLowerCase();if(search&&!text.includes(search))return false;if(category&&i.category!==category)return false;if(status==='today'&&!(i.last_stocktake&&i.last_stocktake.slice(0,10)>=today))return false;if(status==='week'&&!(i.last_stocktake&&i.last_stocktake.slice(0,10)>=weekAgo&&i.last_stocktake.slice(0,10)<today))return false;if(status==='overdue'&&i.last_stocktake&&i.last_stocktake.slice(0,10)>=weekAgo)return false;if(lowOnly&&(totals.get(i.id)||0)>Number(i.min_qty||0))return false;if(currentAnomalyFilter==='expired'&&!(i.qty>0&&i.expiry&&i.expiry<today))return false;if(currentAnomalyFilter==='expiring'){const d=new Date(today+'T00:00:00+08:00');d.setDate(d.getDate()+Number(i.warning_days||30));if(!(i.qty>0&&i.expiry&&i.expiry>=today&&i.expiry<=taipeiYmd(d)))return false;}return true;});renderItems(filteredItems);
 }
-
-async function toggleManagedUser(userId, isActive) {
-    const user = managedUsers.find(item => Number(item.id) === Number(userId));
-    if (!user) return;
-    const verb = isActive ? '啟用' : '停用';
-    if (!confirm(`確定要${verb}「${user.displayName}」嗎？`)) return;
-    try {
-        const res = await postApi({ action: 'setUserActive', userId, isActive });
-        managedUsers = Array.isArray(res.users) ? res.users : managedUsers;
-        renderManagedUsers();
-        showToast(`✅ ${res.message || `${verb}完成`}`, 'success');
-    } catch (error) {
-        showAlert(`${verb}失敗：${error.message}`);
-    }
+function handleAnomalyClick(type){if(type==='variance'){if(canManageInventoryUi()){switchTab('admin');setTimeout(loadAuditCenter,0)}else showAlert('盤點差異處理需庫存管理員權限');return;}if(type==='overdue'){switchTab('stocktake');return;}switchTab('dashboard');currentAnomalyFilter=(type==='expired'||type==='expiring')?type:'';document.getElementById('lowStockOnly').checked=type==='low';document.getElementById('statusFilter').value='';filterItems();document.getElementById('itemsList')?.scrollIntoView({behavior:'smooth'});}
+function applyDashboardMetricFilter(mode){currentAnomalyFilter='';const status=document.getElementById('statusFilter'),low=document.getElementById('lowStockOnly'),search=document.getElementById('searchInput');if(mode==='pending'){switchTab('stocktake');return;}if(status)status.value=mode==='today'?'today':'';if(low)low.checked=mode==='low';if(mode==='all'&&search)search.value='';filterItems();document.getElementById('itemsList')?.scrollIntoView({behavior:'smooth',block:'start'});}
+async function renderAdminInventory(){
+    if(!canManageInventoryUi()){showAlert('權限不足');return;}const box=document.getElementById('adminContent');box.innerHTML='<div class="v4-muted">讀取品項主檔…</div>';
+    try{const res=await getApiResource('adminInventory');if(Array.isArray(res.locations)){allLocations=res.locations.map(x=>({...x,location_id:Number(x.location_id),is_active:Number(x.is_active)!==0}));populateLocationSelectors();}const balances=(res.items||[]).map(normalizeInventoryItem),byId=new Map();balances.forEach(x=>{if(!byId.has(x.id))byId.set(x.id,[]);byId.get(x.id).push(x)});
+    box.innerHTML=(res.masters||[]).map(m=>{const id=String(m.item_id),k=encodeURIComponent(id),rows=byId.get(id)||[],batchMap=new Map();for(const r of rows){if(!batchMap.has(r.batch_id))batchMap.set(r.batch_id,{...r,locations:[]});batchMap.get(r.batch_id).locations.push(r);}const priceField=canViewCostUi()?`<label>單價<input id="adm-price-${k}" type="number" min="0" step="0.01" value="${Number(m.default_price||0)}"></label>`:'';
+      return `<section class="admin-item-v4 ${Number(m.is_active)!==1?'inactive':''}"><div class="admin-item-title"><b>${escapeHtmlClient(m.name||id)}</b><span>${escapeHtmlClient(id)}</span><button onclick="toggleItemActiveV4(decodeURIComponent('${k}'),${Number(m.is_active)!==1})" class="mini-btn ${Number(m.is_active)===1?'danger':'success'}">${Number(m.is_active)===1?'停用':'啟用'}</button></div><div class="admin-fields"><label>品名<input id="adm-name-${k}" value="${escapeHtmlClient(m.name||id)}"></label><label>分類<input id="adm-cat-${k}" value="${escapeHtmlClient(m.category||'')}"></label><label>安全庫存<input id="adm-min-${k}" type="number" min="0" value="${Number(m.min_qty||0)}"></label><label>目標庫存<input id="adm-target-${k}" type="number" min="0" value="${Number(m.target_qty||0)}"></label><label>效期預警天數<input id="adm-warning-${k}" type="number" min="0" max="3650" value="${Number(m.warning_days||30)}"></label><label>採購前置天數<input id="adm-lead-${k}" type="number" min="0" max="3650" value="${Number(m.lead_time_days||7)}"></label>${priceField}</div><button onclick="saveAdminItem(decodeURIComponent('${k}'))" class="v4-primary-btn">儲存品項主檔</button><div class="admin-batches">${[...batchMap.values()].map(r=>`<div class="admin-batch-row"><div class="batch-location-summary">${r.locations.map(l=>`<span class="location-chip">${escapeHtmlClient(l.location_name)} ${l.qty}</span>`).join('')}</div><input id="adm-lot-${r.batch_id}" value="${escapeHtmlClient(r.lot)}" placeholder="LOT"><input id="adm-exp-${r.batch_id}" type="date" value="${escapeHtmlClient(r.expiry)}"><input id="adm-note-${r.batch_id}" value="${escapeHtmlClient(r.batch_note||'')}" placeholder="批次備註"><span class="qty-readonly">總量 ${r.locations.reduce((s,x)=>s+Number(x.qty||0),0)}</span><button onclick="saveAdminBatch(${r.batch_id})" class="mini-btn primary">批次資料</button><button onclick="printInventoryLabel(${r.batch_id},${r.locations[0]?.location_id||0})" class="mini-btn"><i class="fas fa-print"></i></button></div>`).join('')||'<div class="v4-muted">尚無批次</div>'}</div></section>`;}).join('')||'<div class="v4-empty">尚無品項</div>';
+    }catch(e){box.innerHTML=`<div class="v4-error">${escapeHtmlClient(e.message)}</div>`;}
 }
+async function switchTab(tab,sourceBtn=null){if(tab==='admin'&&!canManageInventoryUi()){showAlert('權限不足');return;}if(tab==='threshold'&&!canManageInventoryUi()){showAlert('安全庫存與採購策略僅限庫存管理員以上權限');return;}if(['scanner','manual','stocktake'].includes(tab)&&!canOperateUi()){showAlert('目前帳號為唯讀，不能執行庫存作業');return;}if(homeQrCode){try{await toggleHomeScanner()}catch{}}if(html5QrCode){try{if(html5QrCode.isScanning)await html5QrCode.stop()}catch{}try{html5QrCode.clear()}catch{}html5QrCode=null;document.getElementById('scannerPlaceholder')?.classList.remove('hidden');document.getElementById('scanForm')?.classList.add('hidden');}if(tab!=='stocktake'&&stocktakeQrActive)try{await toggleStocktakeScanner()}catch{}document.querySelectorAll('#mainContent > div').forEach(d=>d.classList.add('hidden'));const view=document.getElementById(tab+'View');if(!view)return;view.classList.remove('hidden');document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active','text-blue-600','bg-blue-50'));if(sourceBtn)sourceBtn.classList.add('active','text-blue-600','bg-blue-50');if(tab==='dashboard'){filterItems();loadAnomalyCenter();loadAnalyticsSummary();}if(tab==='manual'){populateLocationSelectors();toggleManualMode();}if(tab==='scanner'){populateLocationSelectors();setScanMode(scanMode);}if(tab==='report')generateReport();if(tab==='threshold')renderThresholds();if(tab==='stocktake'){populateLocationSelectors();await refreshStocktakeWorkflow();}if(tab==='admin')await renderAdminInventory();window.scrollTo(0,0);}
 
-function openResetUserPassword(userId) {
-    const user = managedUsers.find(item => Number(item.id) === Number(userId));
-    if (!user) return;
-    managedResetUserId = Number(userId);
-    document.getElementById('resetUserPasswordTarget').textContent = `${user.displayName}（${user.account}）`;
-    document.getElementById('managedResetPassword').value = '';
-    document.getElementById('managedResetPasswordConfirm').value = '';
-    const modal = document.getElementById('resetUserPasswordModal');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    syncModalPageLock();
-    setTimeout(() => document.getElementById('managedResetPassword').focus(), 50);
+
+let lastClientLogAt = 0;
+function reportClientError(eventType, message, context={}) {
+    if (!CURRENT_SESSION_TOKEN || navigator.onLine === false) return;
+    const now=Date.now(); if (now-lastClientLogAt<1500) return; lastClientLogAt=now;
+    postApi({action:'clientLog',severity:'error',eventType,message:String(message||'').slice(0,900),page:location.pathname,context},{retries:0,timeoutMs:5000}).catch(()=>{});
 }
+window.addEventListener('error', e => reportClientError('CLIENT_JS_ERROR', e.message, {file:e.filename||'',line:e.lineno||0,col:e.colno||0}));
+window.addEventListener('unhandledrejection', e => reportClientError('CLIENT_PROMISE_REJECTION', e.reason?.message||String(e.reason||'Promise rejection')));
 
-function closeResetUserPassword() {
-    const modal = document.getElementById('resetUserPasswordModal');
-    if (!modal) return;
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-    managedResetUserId = null;
-    syncModalPageLock();
-}
-
-async function submitManagedPasswordReset() {
-    const userId = managedResetUserId;
-    const password = document.getElementById('managedResetPassword').value;
-    const confirmation = document.getElementById('managedResetPasswordConfirm').value;
-    if (!userId || !password) {
-        showAlert('新密碼不可空白');
-        return;
-    }
-    if (password !== confirmation) {
-        showAlert('兩次輸入的密碼不一致');
-        return;
-    }
-    const target = managedUsers.find(item => Number(item.id) === Number(userId));
-    const button = document.getElementById('resetUserPasswordButton');
-    button.disabled = true;
-    try {
-        const res = await postApi({ action: 'resetUserPassword', userId, password });
-        closeResetUserPassword();
-        if (target && String(target.account) === String(CURRENT_USER_ACCOUNT)) {
-            showAlert('自己的密碼已重設，請使用新密碼重新登入');
-            handleLogout();
-            return;
-        }
-        showToast(`✅ ${res.message || '密碼已重設'}`, 'success');
-    } catch (error) {
-        showAlert('重設失敗：' + error.message);
-    } finally {
-        button.disabled = false;
-    }
-}
-
-function renderAdminInventory() {
-    const container = document.getElementById('adminInventoryList');
-    if (!container) return;
-    if (CURRENT_USER_ROLE !== 'admin') {
-        container.innerHTML = '<div class="text-center text-red-500 py-6 font-bold">只有管理員可以使用此頁面</div>';
-        return;
-    }
-    const keyword = (document.getElementById('adminInventorySearch')?.value || '').trim().toLowerCase();
-    const rows = allItems
-        .filter(item => !keyword || item.name.toLowerCase().includes(keyword) || item.id.toLowerCase().includes(keyword) || item.lot.toLowerCase().includes(keyword))
-        .slice()
-        .sort((a, b) => a.name.localeCompare(b.name, 'zh-TW') || a.id.localeCompare(b.id) || a.expiry.localeCompare(b.expiry));
-
-    if (rows.length === 0) {
-        container.innerHTML = '<div class="text-center text-gray-400 py-8 font-bold">查無庫存資料</div>';
-        return;
-    }
-
-    container.innerHTML = rows.map(item => `
-        <div class="border border-gray-200 rounded-xl p-3 bg-white shadow-sm">
-            <div class="flex items-start justify-between gap-2 mb-3">
-                <div class="min-w-0"><div class="font-black text-slate-800 truncate">${escapeManagementHtml(item.name)}</div><div class="font-mono text-[11px] text-slate-500 mt-0.5">ID: ${escapeManagementHtml(item.id)}</div></div>
-                ${item.isHidden ? '<span class="text-[10px] bg-slate-100 text-slate-500 border border-slate-200 px-2 py-1 rounded">首頁已隱藏</span>' : ''}
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div><label class="block text-[11px] font-bold text-slate-500 mb-1">LOT</label><input id="admin-lot-${item.rowId}" type="text" value="${escapeManagementHtml(item.lot)}" class="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm outline-none"></div>
-                <div><label class="block text-[11px] font-bold text-slate-500 mb-1">有效期限</label><input id="admin-expiry-${item.rowId}" type="date" value="${escapeManagementHtml(item.expiry)}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"></div>
-                <div><label class="block text-[11px] font-bold text-slate-500 mb-1">庫存量</label><div class="flex gap-2"><input id="admin-qty-${item.rowId}" type="number" min="0" step="1" value="${Number(item.qty) || 0}" class="min-w-0 flex-1 px-3 py-2 border border-gray-300 rounded-lg font-mono font-bold text-sm outline-none"><button id="admin-save-${item.rowId}" onclick="saveAdminInventoryRow(${item.rowId})" class="px-3 py-2 bg-indigo-600 text-white rounded-lg font-bold text-sm whitespace-nowrap"><i class="fas fa-save mr-1"></i>儲存</button></div></div>
-            </div>
-        </div>
-    `).join('');
-}
-
-async function saveAdminInventoryRow(rowId) {
-    if (CURRENT_USER_ROLE !== 'admin') {
-        showAlert('只有管理員可以修改庫存');
-        return;
-    }
-    const lot = document.getElementById(`admin-lot-${rowId}`).value.trim();
-    const expiry = document.getElementById(`admin-expiry-${rowId}`).value;
-    const qtyText = document.getElementById(`admin-qty-${rowId}`).value;
-    const qty = parseInt(qtyText, 10);
-    if (!Number.isInteger(qty) || qty < 0) {
-        showAlert('庫存量必須是 0 以上的整數');
-        return;
-    }
-    const item = allItems.find(row => Number(row.rowId) === Number(rowId));
-    if (!item) {
-        showAlert('找不到這筆庫存，請重新整理');
-        return;
-    }
-    if (!confirm(`確定修改「${item.name}」的 LOT、有效期限與庫存量嗎？`)) return;
-    const button = document.getElementById(`admin-save-${rowId}`);
-    button.disabled = true;
-    const original = button.innerHTML;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    try {
-        const res = await postApi({ action: 'adminUpdateInventory', rowId, lot, expiry, qty });
-        if (!Array.isArray(res.items)) throw new Error('後端未回傳更新後庫存');
-        applyInventoryData({ items: res.items });
-        showToast(`✅ ${res.message || '庫存資料已更新'}`, 'success');
-    } catch (error) {
-        showAlert('修改失敗：' + error.message);
-    } finally {
-        const freshButton = document.getElementById(`admin-save-${rowId}`);
-        if (freshButton) {
-            freshButton.disabled = false;
-            freshButton.innerHTML = original;
-        }
-    }
-}
-
-
-async function switchTab(tab, sourceBtn = null) {
-    if (tab === 'admin' && CURRENT_USER_ROLE !== 'admin') {
-        showAlert('只有管理員可以使用管理者頁面');
-        return;
-    }
-    if (tab === 'admin' && !(await ensureLiveInventoryReady())) return;
-    if (homeQrCode) { await toggleHomeScanner(); }
-    if (html5QrCode) {
-        try { if (html5QrCode.isScanning) await html5QrCode.stop(); } catch(e){}
-        try { html5QrCode.clear(); } catch(e){}
-        html5QrCode = null;
-        document.getElementById('scannerPlaceholder').classList.remove('hidden');
-        document.getElementById('scanForm').classList.add('hidden');
-    }
-
-    document.querySelectorAll('#mainContent > div').forEach(div => div.classList.add('hidden'));
-    document.getElementById(tab + 'View').classList.remove('hidden');
-    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active', 'text-blue-600', 'bg-blue-50'));
-    if (sourceBtn) sourceBtn.classList.add('active', 'text-blue-600', 'bg-blue-50');
-
-    if (tab === 'dashboard') filterItems();
-    if (tab === 'manual') toggleManualMode();
-    if (tab === 'report') {
-        generateReport();
-        if (CURRENT_USER_ROLE === 'admin') await loadAutoSchedule();
-    }
-    if (tab === 'threshold') renderThresholds();
-    if (tab === 'admin') renderAdminInventory();
-    window.scrollTo(0,0);
-}
 </script>
 </body>
 </html>
